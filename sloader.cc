@@ -59,25 +59,27 @@ class ELF {
         }
     }
     void Show() {
-        std::cout << "Ehdr:" << LOG_BITS(ehdr()->e_entry) << LOG_BITS(size_)
-                  << LOG_BITS(head_) << std::endl;
+        LOG(INFO) << "Ehdr:" << LOG_BITS(ehdr()->e_entry) << LOG_BITS(size_)
+                  << LOG_BITS(head_);
         for (auto p : phdrs()) {
-            std::cout << "Phdr:" << LOG_BITS(p->p_vaddr)
-                      << LOG_BITS(p->p_offset) << LOG_BITS(p->p_filesz)
-                      << std::endl;
+            LOG(INFO) << "Phdr:" << LOG_BITS(p->p_vaddr)
+                      << LOG_BITS(p->p_offset) << LOG_BITS(p->p_filesz);
         }
     }
     void Load() {
         for (auto ph : phdrs()) {
-            std::cout << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
-                      << LOG_BITS(ph->p_memsz) << std::endl;
+            if (ph->p_type != PT_LOAD) {
+                continue;
+            }
+            LOG(INFO) << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
+                      << LOG_BITS(ph->p_memsz);
             char* p = reinterpret_cast<char*>(
                 mmap(reinterpret_cast<void*>(ph->p_vaddr), ph->p_memsz,
                      PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
             CHECK(p != MAP_FAILED) << "mmap failed: " << filename();
-            std::cout << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
-                      << LOG_BITS(ph->p_filesz) << std::endl;
+            LOG(INFO) << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
+                      << LOG_BITS(ph->p_filesz);
             memcpy(p, head() + ph->p_offset, ph->p_filesz);
             memories_.emplace_back(std::make_pair(p, ph->p_memsz));
         }

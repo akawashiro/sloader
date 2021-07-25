@@ -45,8 +45,6 @@ std::string HexString(T num, int length = -1) {
     return ss.str();
 }
 
-typedef void (*init_t)();
-
 class ELF {
    public:
     ELF(const std::string& filename, char* head, const size_t size)
@@ -54,10 +52,18 @@ class ELF {
         ehdr_ = reinterpret_cast<Elf64_Ehdr*>(head);
         CHECK_EQ(ehdr()->e_type, ET_EXEC);
         for (uint16_t i = 0; i < ehdr()->e_phnum; i++) {
-            phdrs_.emplace_back(reinterpret_cast<const Elf64_Phdr*>(
+            phdrs_.emplace_back(reinterpret_cast<Elf64_Phdr*>(
                 head_ + ehdr()->e_phoff + i * ehdr()->e_phentsize));
         }
+        for (auto ph : phdrs()) {
+            LOG(INFO) << LOG_BITS(ph->p_type);
+            if (ph->p_type == PT_DYNAMIC) {
+                CHECK(ph_dynamic_ == NULL);
+                ph_dynamic_ = ph;
+            }
+        }
     }
+
     void Show() {
         LOG(INFO) << "Ehdr:" << LOG_BITS(ehdr()->e_entry) << LOG_BITS(size_)
                   << LOG_BITS(head_);
@@ -66,7 +72,9 @@ class ELF {
                       << LOG_BITS(p->p_offset) << LOG_BITS(p->p_filesz);
         }
     }
+
     void Load() {
+        LOG(INFO) << "Load start";
         for (auto ph : phdrs()) {
             if (ph->p_type != PT_LOAD) {
                 continue;
@@ -83,28 +91,37 @@ class ELF {
             memcpy(p, head() + ph->p_offset, ph->p_filesz);
             memories_.emplace_back(std::make_pair(p, ph->p_memsz));
         }
+        LOG(INFO) << "Load end";
     }
+
     void Unload() {
         for (auto p : memories_) {
             munmap(p.first, p.second);
         }
     }
+
+    void Relocate() {}
+
     void Execute() {
+        LOG(INFO) << "Execute start";
         const void* p = reinterpret_cast<const void*>(ehdr()->e_entry);
-        void (*fp)(void) = ((init_t)(ehdr()->e_entry));
+        void (*fp)(void) = ((void (*)())(ehdr()->e_entry));
         fp();
+        LOG(INFO) << "Execute end";
     }
-    const std::string filename() { return filename_; }
-    const Elf64_Ehdr* ehdr() { return ehdr_; }
-    const char* head() { return head_; }
-    const std::vector<const Elf64_Phdr*> phdrs() { return phdrs_; }
+    std::string filename() { return filename_; }
+    Elf64_Ehdr* ehdr() { return ehdr_; }
+    char* head() { return head_; }
+    std::vector<Elf64_Phdr*> phdrs() { return phdrs_; }
 
    private:
-    const char* head_;
-    const size_t size_;
-    const std::string filename_;
+    char* head_;
+    size_t size_;
+    std::string filename_;
     Elf64_Ehdr* ehdr_;
-    std::vector<const Elf64_Phdr*> phdrs_;
+    std::vector<Elf64_Phdr*> phdrs_;
+    Elf64_Phdr* ph_dynamic_ = NULL;
+    std::vector<Elf64_Dyn*> dyns_;
     std::vector<std::pair<char*, uint32_t>> memories_;
 };
 

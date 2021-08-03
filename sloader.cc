@@ -103,10 +103,15 @@ class ELF {
     void Relocate() {}
 
     void Execute() {
-        LOG(INFO) << "Execute start";
-        const void* p = reinterpret_cast<const void*>(ehdr()->e_entry);
+        LOG(INFO) << "Execute start" << LOG_KEY(filename());
+        const char* cstr = filename().c_str();
         void (*fp)(void) = ((void (*)())(ehdr()->e_entry));
-        fp();
+        asm volatile("push $0");
+        asm volatile("push $0");
+        asm volatile("push %0" ::"m"(cstr));
+        asm volatile("push $1");
+        asm volatile("jmp *%0" ::"m"(fp));
+        // fp();
         LOG(INFO) << "Execute end";
     }
     std::string filename() { return filename_; }

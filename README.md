@@ -30,10 +30,10 @@ ctest -V
 ```
 - `0x00000000004017e5` はbacktraceに現れてはいるものの、breakpointを設定しても止まらない。このことから、return時に呼び出されると考えられる。
 - `ARCH_INIT_CPU_FEATURES` の中で死んでる?
-[](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/unix/sysv/linux/aarch64/libc-start.c#L30)
-- [](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/x86/cpu-features.c#L792-L798)
+[https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/unix/sysv/linux/aarch64/libc-start.c#L30](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/unix/sysv/linux/aarch64/libc-start.c#L30)
+- [https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/x86/cpu-features.c#L792-L798](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/x86/cpu-features.c#L792-L798)
     - `_dl_tunable_set_x86_shstk` と `_dl_tunable_set_x86_ibt` が並んでいるのでこのあたりが原因
-- [](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/elf/dl-tunables.h#L84-L85)
+- [https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/elf/dl-tunables.h#L84-L85](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/elf/dl-tunables.h#L84-L85)
     - Get and return a tunable value.  If the tunable was set externally and `__CB` is defined then call `__CB` before returning the value.
-    - コメントに対応するところ: [](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/elf/dl-tunables.c#L432-L433)
-- 死ぬ直前 [](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/x86/cpu-tunables.c#L312-L323)
+    - コメントに対応するところ: [https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/elf/dl-tunables.c#L432-L433](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/elf/dl-tunables.c#L432-L433)
+- 死ぬ直前 [https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/x86/cpu-tunables.c#L312-L323](https://github.com/bminor/glibc/blob/1f51cd9a860ee45eee8a56fb2ba925267a2a7bfe/sysdeps/x86/cpu-tunables.c#L312-L323)

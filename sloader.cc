@@ -106,6 +106,8 @@ class ELF {
         LOG(INFO) << "Execute start" << LOG_KEY(filename());
         const char* cstr = filename().c_str();
         void (*fp)(void) = ((void (*)())(ehdr()->e_entry));
+        asm volatile("push $0");  // 0
+        asm volatile("push $0");  // AT_NULL
         asm volatile("push $0");
         asm volatile("push $0");
         asm volatile("push %0" ::"m"(cstr));

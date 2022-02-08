@@ -105,15 +105,13 @@ class ELF {
     void Execute() {
         LOG(INFO) << "Execute start" << LOG_KEY(filename());
         const char* cstr = filename().c_str();
-        void (*fp)(void) = ((void (*)())(ehdr()->e_entry));
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // AT_NULL
         asm volatile("push $0");
         asm volatile("push $0");
         asm volatile("push %0" ::"m"(cstr));
         asm volatile("push $1");
-        asm volatile("jmp *%0" ::"m"(fp));
-        // fp();
+        asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
         LOG(INFO) << "Execute end";
     }
     std::string filename() { return filename_; }

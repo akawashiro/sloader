@@ -1,7 +1,7 @@
 #include <elf.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <glog/logging.h>
+// #include <glog/logging.h>
 #include <sys/mman.h>
 
 #include <iomanip>
@@ -9,7 +9,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstring>
+#include <unistd.h>
 
+#define LOG(level) std::cerr
 #define LOG_KEY_VALUE(key, value) " " << key << "=" << value
 #define LOG_KEY(key) LOG_KEY_VALUE(#key, key)
 #define LOG_BITS(key) LOG_KEY_VALUE(#key, HexString(key))
@@ -50,7 +53,7 @@ class ELF {
     ELF(const std::string& filename, char* head, const size_t size)
         : filename_(filename), head_(head), size_(size) {
         ehdr_ = reinterpret_cast<Elf64_Ehdr*>(head);
-        CHECK_EQ(ehdr()->e_type, ET_EXEC);
+        // CHECK_EQ(ehdr()->e_type, ET_EXEC);
         for (uint16_t i = 0; i < ehdr()->e_phnum; i++) {
             phdrs_.emplace_back(reinterpret_cast<Elf64_Phdr*>(
                 head_ + ehdr()->e_phoff + i * ehdr()->e_phentsize));
@@ -58,7 +61,7 @@ class ELF {
         for (auto ph : phdrs()) {
             LOG(INFO) << LOG_BITS(ph->p_type);
             if (ph->p_type == PT_DYNAMIC) {
-                CHECK(ph_dynamic_ == NULL);
+                // CHECK(ph_dynamic_ == NULL);
                 ph_dynamic_ = ph;
             }
         }
@@ -85,7 +88,7 @@ class ELF {
                 mmap(reinterpret_cast<void*>(ph->p_vaddr), ph->p_memsz,
                      PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-            CHECK(p != MAP_FAILED) << "mmap failed: " << filename();
+            // CHECK(p != MAP_FAILED) << "mmap failed: " << filename();
             LOG(INFO) << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
                       << LOG_BITS(ph->p_filesz);
             memcpy(p, head() + ph->p_offset, ph->p_filesz);
@@ -134,22 +137,22 @@ class ELF {
 
 std::unique_ptr<ELF> ReadELF(const std::string& filename) {
     int fd = open(filename.c_str(), O_RDONLY);
-    CHECK(fd >= 0) << "Failed to open " << filename;
+    // CHECK(fd >= 0) << "Failed to open " << filename;
 
     size_t size = lseek(fd, 0, SEEK_END);
-    CHECK_GT(size, 8 + 16) << "Too small file: " << filename;
+    // CHECK_GT(size, 8 + 16) << "Too small file: " << filename;
 
     size_t mapped_size = (size + 0xfff) & ~0xfff;
 
     char* p = (char*)mmap(NULL, mapped_size, PROT_READ | PROT_WRITE | PROT_EXEC,
                           MAP_PRIVATE, fd, 0);
-    CHECK(p != MAP_FAILED) << "mmap failed: " << filename;
+    // CHECK(p != MAP_FAILED) << "mmap failed: " << filename;
 
     return std::make_unique<ELF>(filename, p, mapped_size);
 }
 
 int main(int argc, char* const argv[]) {
-    google::InitGoogleLogging(argv[0]);
+    // google::InitGoogleLogging(argv[0]);
 
     static option long_options[] = {
         {"load", required_argument, nullptr, 'l'},
@@ -165,13 +168,13 @@ int main(int argc, char* const argv[]) {
                 file = optarg;
                 break;
             default:
-                CHECK(false);
+                // CHECK(false);
                 break;
         }
     }
 
     if (optind < argc) {
-        CHECK(false) << "Fail to parse arguments.";
+        // CHECK(false) << "Fail to parse arguments.";
     }
 
     auto main_binary = ReadELF(file);

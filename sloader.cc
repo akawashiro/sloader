@@ -112,7 +112,7 @@ class ELF {
                      PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
             LOG() << "mmap: " << filename();
-            CHECK(p != MAP_FAILED);
+            CHECK_EQ(ph->p_vaddr, reinterpret_cast<Elf64_Addr>(p));
             LOG() << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
                   << LOG_BITS(ph->p_filesz) << std::endl;
             memcpy(p, head() + ph->p_offset, ph->p_filesz);

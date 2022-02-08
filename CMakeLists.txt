@@ -10,21 +10,8 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-include(third-party)
-
-get_third_party(glog)
-set(WITH_GFLAGS
-    OFF
-    CACHE INTERNAL "" FORCE)
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/glog
-                 ${CMAKE_CURRENT_BINARY_DIR}/glog EXCLUDE_FROM_ALL)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/glog
-                    ${CMAKE_CURRENT_BINARY_DIR}/glog/src)
-add_definitions(-DC10_USE_GLOG=1)
-
-
 add_executable(sloader sloader.cc)
-target_link_libraries(sloader glog)
+target_link_libraries(sloader)
 
 add_executable(hello_static_libc hello.c)
 target_link_libraries(hello_static_libc -static)
@@ -36,8 +23,6 @@ add_test(
   NAME hello_static_libc_test
   COMMAND ./sloader --load hello_static_libc
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(hello_static_libc_test PROPERTIES ENVIRONMENT
-                                                       "GLOG_logtostderr=1")
 if(CUSTOM_LIBC_PATH)
   add_custom_target(
     hello_static_custom_libc ALL
@@ -54,8 +39,6 @@ if(CUSTOM_LIBC_PATH)
     NAME hello_static_custom_libc_test
     COMMAND ./sloader --load hello_static_custom_libc
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  set_tests_properties(hello_static_custom_libc_test
-                       PROPERTIES ENVIRONMENT "GLOG_logtostderr=1")
 endif()
 
 add_custom_target(
@@ -67,4 +50,3 @@ add_test(
   NAME hello_asm_test
   COMMAND ./sloader --load hello_asm
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(hello_asm_test PROPERTIES ENVIRONMENT "GLOG_logtostderr=1")

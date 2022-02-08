@@ -1,18 +1,44 @@
 #include <elf.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <glog/logging.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
+#include <cassert>
+#include <cstring>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
-#define LOG_KEY_VALUE(key, value) " " << key << "=" << value
+#define LOG() std::cerr << __FILE__ << ":" << __LINE__ << " "
+#define LOG_KEY_VALUE(key, value) key << "=" << value << " "
 #define LOG_KEY(key) LOG_KEY_VALUE(#key, key)
 #define LOG_BITS(key) LOG_KEY_VALUE(#key, HexString(key))
+
+#define CHECK(cond)                  \
+    if (!(cond)) {                   \
+        LOG() << #cond << std::endl; \
+        std::abort();                \
+    }
+#define CHECK_EQ(a, b)                            \
+    if ((a) != (b)) {                             \
+        LOG() << #a << " != " << #b << std::endl; \
+        std::abort();                             \
+    }
+#define CHECK_GT(a, b)                            \
+    if ((a) <= (b)) {                             \
+        LOG() << #a << " <= " << #b << std::endl; \
+        std::abort();                             \
+    }
+#define CHECK_LE(a, b)                            \
+    if ((a) > (b)) {                             \
+        LOG() << #a << " > " << #b << std::endl; \
+        std::abort();                             \
+    }
+
 
 std::string HexString(char* num, int length = -1) {
     if (length == -1) {
@@ -56,7 +82,7 @@ class ELF {
                 head_ + ehdr()->e_phoff + i * ehdr()->e_phentsize));
         }
         for (auto ph : phdrs()) {
-            LOG(INFO) << LOG_BITS(ph->p_type);
+            LOG() << LOG_BITS(ph->p_type) << std::endl;
             if (ph->p_type == PT_DYNAMIC) {
                 CHECK(ph_dynamic_ == NULL);
                 ph_dynamic_ = ph;
@@ -65,33 +91,34 @@ class ELF {
     }
 
     void Show() {
-        LOG(INFO) << "Ehdr:" << LOG_BITS(ehdr()->e_entry) << LOG_BITS(size_)
-                  << LOG_BITS(head_);
+        LOG() << "Ehdr:" << LOG_BITS(ehdr()->e_entry) << LOG_BITS(size_)
+              << LOG_BITS(head_) << std::endl;
         for (auto p : phdrs()) {
-            LOG(INFO) << "Phdr:" << LOG_BITS(p->p_vaddr)
-                      << LOG_BITS(p->p_offset) << LOG_BITS(p->p_filesz);
+            LOG() << "Phdr:" << LOG_BITS(p->p_vaddr) << LOG_BITS(p->p_offset)
+                  << LOG_BITS(p->p_filesz) << std::endl;
         }
     }
 
     void Load() {
-        LOG(INFO) << "Load start";
+        LOG() << "Load start" << std::endl;
         for (auto ph : phdrs()) {
             if (ph->p_type != PT_LOAD) {
                 continue;
             }
-            LOG(INFO) << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
-                      << LOG_BITS(ph->p_memsz);
+            LOG() << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
+                  << LOG_BITS(ph->p_memsz) << std::endl;
             char* p = reinterpret_cast<char*>(
                 mmap(reinterpret_cast<void*>(ph->p_vaddr), ph->p_memsz,
                      PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-            CHECK(p != MAP_FAILED) << "mmap failed: " << filename();
-            LOG(INFO) << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
-                      << LOG_BITS(ph->p_filesz);
+            LOG() << "mmap: " << filename();
+            CHECK(p != MAP_FAILED);
+            LOG() << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
+                  << LOG_BITS(ph->p_filesz) << std::endl;
             memcpy(p, head() + ph->p_offset, ph->p_filesz);
             memories_.emplace_back(std::make_pair(p, ph->p_memsz));
         }
-        LOG(INFO) << "Load end";
+        LOG() << "Load end" << std::endl;
     }
 
     void Unload() {
@@ -103,7 +130,7 @@ class ELF {
     void Relocate() {}
 
     void Execute() {
-        LOG(INFO) << "Execute start" << LOG_KEY(filename());
+        LOG() << "Execute start" << LOG_KEY(filename()) << std::endl;
         const char* cstr = filename().c_str();
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // AT_NULL
@@ -112,7 +139,7 @@ class ELF {
         asm volatile("push %0" ::"m"(cstr));
         asm volatile("push $1");
         asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
-        LOG(INFO) << "Execute end";
+        LOG() << "Execute end" << std::endl;
     }
     std::string filename() { return filename_; }
     Elf64_Ehdr* ehdr() { return ehdr_; }
@@ -132,23 +159,21 @@ class ELF {
 
 std::unique_ptr<ELF> ReadELF(const std::string& filename) {
     int fd = open(filename.c_str(), O_RDONLY);
-    CHECK(fd >= 0) << "Failed to open " << filename;
+    CHECK(fd >= 0);
 
     size_t size = lseek(fd, 0, SEEK_END);
-    CHECK_GT(size, 8 + 16) << "Too small file: " << filename;
+    CHECK_GT(size, 8 + 16);
 
     size_t mapped_size = (size + 0xfff) & ~0xfff;
 
     char* p = (char*)mmap(NULL, mapped_size, PROT_READ | PROT_WRITE | PROT_EXEC,
                           MAP_PRIVATE, fd, 0);
-    CHECK(p != MAP_FAILED) << "mmap failed: " << filename;
+    CHECK(p != MAP_FAILED);
 
     return std::make_unique<ELF>(filename, p, mapped_size);
 }
 
 int main(int argc, char* const argv[]) {
-    google::InitGoogleLogging(argv[0]);
-
     static option long_options[] = {
         {"load", required_argument, nullptr, 'l'},
         {0, 0, 0, 0},
@@ -168,9 +193,7 @@ int main(int argc, char* const argv[]) {
         }
     }
 
-    if (optind < argc) {
-        CHECK(false) << "Fail to parse arguments.";
-    }
+    CHECK_LE(optind, argc);
 
     auto main_binary = ReadELF(file);
     main_binary->Show();

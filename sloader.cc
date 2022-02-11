@@ -38,6 +38,12 @@
         LOG() << #a << " > " << #b << std::endl; \
         std::abort();                             \
     }
+#define CHECK_LT(a, b)                            \
+    if ((a) >= (b)) {                             \
+        LOG() << #a << " > " << #b << std::endl; \
+        std::abort();                             \
+    }
+
 
 
 std::string HexString(char* num, int length = -1) {
@@ -107,15 +113,20 @@ class ELF {
             }
             LOG() << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
                   << LOG_BITS(ph->p_memsz) << std::endl;
+            void* mmap_start = reinterpret_cast<void*>((ph->p_vaddr) & (~(0xfff)));
+            void* mmap_end = reinterpret_cast<void*>(((ph->p_vaddr + ph->p_memsz) + 0xfff)& (~(0xfff)));
+            size_t mmap_size = reinterpret_cast<size_t>(mmap_end) - reinterpret_cast<size_t>(mmap_start);
             char* p = reinterpret_cast<char*>(
-                mmap(reinterpret_cast<void*>(ph->p_vaddr), ph->p_memsz,
+                mmap(mmap_start, mmap_size,
                      PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
             LOG() << "mmap: " << LOG_KEY(filename()) << LOG_BITS(p) << LOG_BITS(ph->p_vaddr) << std::endl;
-            CHECK_EQ(ph->p_vaddr, reinterpret_cast<Elf64_Addr>(p));
+            CHECK_EQ(mmap_start, p);
+            CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph->p_vaddr);
+            CHECK_LT(ph->p_vaddr + ph->p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
             LOG() << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
                   << LOG_BITS(ph->p_filesz) << std::endl;
-            memcpy(p, head() + ph->p_offset, ph->p_filesz);
+            memcpy(reinterpret_cast<void*>(ph->p_vaddr), head() + ph->p_offset, ph->p_filesz);
             memories_.emplace_back(std::make_pair(p, ph->p_memsz));
         }
         LOG() << "Load end" << std::endl;
@@ -134,6 +145,8 @@ class ELF {
         const char* cstr = filename().c_str();
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // AT_NULL
+        asm volatile("push $4203630");  // 0xdead
+        asm volatile("push $25");  // AT_RANDOM
         asm volatile("push $0");
         asm volatile("push $0");
         asm volatile("push %0" ::"m"(cstr));

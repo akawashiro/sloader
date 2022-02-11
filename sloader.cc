@@ -111,7 +111,7 @@ class ELF {
                 mmap(reinterpret_cast<void*>(ph->p_vaddr), ph->p_memsz,
                      PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-            LOG() << "mmap: " << filename();
+            LOG() << "mmap: " << LOG_KEY(filename()) << LOG_BITS(p) << LOG_BITS(ph->p_vaddr) << std::endl;
             CHECK_EQ(ph->p_vaddr, reinterpret_cast<Elf64_Addr>(p));
             LOG() << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
                   << LOG_BITS(ph->p_filesz) << std::endl;

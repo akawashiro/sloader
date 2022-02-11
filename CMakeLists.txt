@@ -11,7 +11,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_executable(sloader sloader.cc)
-target_link_libraries(sloader -static)
+target_link_options(sloader PUBLIC -static -T ${CMAKE_CURRENT_SOURCE_DIR}/sloader.map)
 
 add_executable(hello_static_libc hello.c)
 target_link_libraries(hello_static_libc -static)

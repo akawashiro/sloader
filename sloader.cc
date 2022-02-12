@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <sys/mman.h>
+#include <sys/auxv.h>
 #include <unistd.h>
 
 #include <cassert>
@@ -26,6 +27,11 @@
 #define CHECK_EQ(a, b)                            \
     if ((a) != (b)) {                             \
         LOG() << #a << " != " << #b << std::endl; \
+        std::abort();                             \
+    }
+#define CHECK_NE(a, b)                            \
+    if ((a) == (b)) {                             \
+        LOG() << #a << " == " << #b << std::endl; \
         std::abort();                             \
     }
 #define CHECK_GT(a, b)                            \
@@ -141,11 +147,15 @@ class ELF {
     void Relocate() {}
 
     void Execute() {
+        unsigned long at_random = getauxval(AT_RANDOM);
+        CHECK_NE(at_random, 0);
+        LOG() << LOG_BITS(at_random) << std::endl;
+
         LOG() << "Execute start" << LOG_KEY(filename()) << std::endl;
         const char* cstr = filename().c_str();
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // AT_NULL
-        asm volatile("push $4203630");  // 0xdead
+        asm volatile("push %0" ::"r"(at_random));
         asm volatile("push $25");  // AT_RANDOM
         asm volatile("push $0");
         asm volatile("push $0");

@@ -153,14 +153,30 @@ class ELF {
 
         LOG() << "Execute start" << LOG_KEY(filename()) << std::endl;
         const char* cstr = filename().c_str();
+
+        // See http://articles.manugarg.com/aboutelfauxiliaryvectors.html for the stack layout
+        // Padding
+        asm volatile("push $0");  // 0
+        asm volatile("push $0");  // 0
+        asm volatile("push $0");  // 0
+        asm volatile("push $0");  // 0
+
+        // Auxiliary vectors
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // AT_NULL
         asm volatile("push %0" ::"r"(at_random));
         asm volatile("push $25");  // AT_RANDOM
-        asm volatile("push $0");
-        asm volatile("push $0");
         asm volatile("push %0" ::"m"(cstr));
-        asm volatile("push $1");
+        asm volatile("push $31");  // AT_EXECFN
+
+        // Environment variables
+        asm volatile("push $0");
+
+        // Argument from user
+        asm volatile("push $0"); // argv[argc] (must be NULL)
+        asm volatile("push %0" ::"m"(cstr)); // argv[0]
+        asm volatile("push $1"); // argc
+
         asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
         LOG() << "Execute end" << std::endl;
     }

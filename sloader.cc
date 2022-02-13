@@ -1,8 +1,8 @@
 #include <elf.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <sys/mman.h>
 #include <sys/auxv.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #include <cassert>
@@ -24,10 +24,11 @@
         LOG() << #cond << std::endl; \
         std::abort();                \
     }
-#define CHECK_EQ(a, b)                            \
-    if ((a) != (b)) {                             \
-        LOG() << #a << " != " << #b << std::endl; \
-        std::abort();                             \
+#define CHECK_EQ(a, b)                                                    \
+    if ((a) != (b)) {                                                     \
+        LOG() << #a << "(" << HexString(a) << ")"                         \
+              << " != " << #b << "(" << HexString(b) << ")" << std::endl; \
+        std::abort();                                                     \
     }
 #define CHECK_NE(a, b)                            \
     if ((a) == (b)) {                             \
@@ -39,18 +40,16 @@
         LOG() << #a << " <= " << #b << std::endl; \
         std::abort();                             \
     }
-#define CHECK_LE(a, b)                            \
+#define CHECK_LE(a, b)                           \
     if ((a) > (b)) {                             \
         LOG() << #a << " > " << #b << std::endl; \
-        std::abort();                             \
+        std::abort();                            \
     }
-#define CHECK_LT(a, b)                            \
-    if ((a) >= (b)) {                             \
+#define CHECK_LT(a, b)                           \
+    if ((a) >= (b)) {                            \
         LOG() << #a << " > " << #b << std::endl; \
-        std::abort();                             \
+        std::abort();                            \
     }
-
-
 
 std::string HexString(char* num, int length = -1) {
     if (length == -1) {
@@ -119,20 +118,25 @@ class ELF {
             }
             LOG() << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
                   << LOG_BITS(ph->p_memsz) << std::endl;
-            void* mmap_start = reinterpret_cast<void*>((ph->p_vaddr) & (~(0xfff)));
-            void* mmap_end = reinterpret_cast<void*>(((ph->p_vaddr + ph->p_memsz) + 0xfff)& (~(0xfff)));
-            size_t mmap_size = reinterpret_cast<size_t>(mmap_end) - reinterpret_cast<size_t>(mmap_start);
+            void* mmap_start =
+                reinterpret_cast<void*>((ph->p_vaddr) & (~(0xfff)));
+            void* mmap_end = reinterpret_cast<void*>(
+                ((ph->p_vaddr + ph->p_memsz) + 0xfff) & (~(0xfff)));
+            size_t mmap_size = reinterpret_cast<size_t>(mmap_end) -
+                               reinterpret_cast<size_t>(mmap_start);
             char* p = reinterpret_cast<char*>(
-                mmap(mmap_start, mmap_size,
-                     PROT_READ | PROT_WRITE | PROT_EXEC,
+                mmap(mmap_start, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-            LOG() << "mmap: " << LOG_KEY(filename()) << LOG_BITS(p) << LOG_BITS(ph->p_vaddr) << std::endl;
+            LOG() << "mmap: " << LOG_KEY(filename()) << LOG_BITS(p)
+                  << LOG_BITS(ph->p_vaddr) << std::endl;
             CHECK_EQ(mmap_start, p);
             CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph->p_vaddr);
-            CHECK_LT(ph->p_vaddr + ph->p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
+            CHECK_LT(ph->p_vaddr + ph->p_memsz,
+                     reinterpret_cast<Elf64_Addr>(mmap_end));
             LOG() << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
                   << LOG_BITS(ph->p_filesz) << std::endl;
-            memcpy(reinterpret_cast<void*>(ph->p_vaddr), head() + ph->p_offset, ph->p_filesz);
+            memcpy(reinterpret_cast<void*>(ph->p_vaddr), head() + ph->p_offset,
+                   ph->p_filesz);
             memories_.emplace_back(std::make_pair(p, ph->p_memsz));
         }
         LOG() << "Load end" << std::endl;
@@ -154,8 +158,8 @@ class ELF {
         LOG() << "Execute start" << LOG_KEY(filename()) << std::endl;
         const char* cstr = filename().c_str();
 
-        // See http://articles.manugarg.com/aboutelfauxiliaryvectors.html for the stack layout
-        // Padding
+        // See http://articles.manugarg.com/aboutelfauxiliaryvectors.html for
+        // the stack layout Padding
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // 0
@@ -173,9 +177,9 @@ class ELF {
         asm volatile("push $0");
 
         // Argument from user
-        asm volatile("push $0"); // argv[argc] (must be NULL)
-        asm volatile("push %0" ::"m"(cstr)); // argv[0]
-        asm volatile("push $1"); // argc
+        asm volatile("push $0");              // argv[argc] (must be NULL)
+        asm volatile("push %0" ::"m"(cstr));  // argv[0]
+        asm volatile("push $1");              // argc
 
         asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
         LOG() << "Execute end" << std::endl;

@@ -150,7 +150,7 @@ class ELF {
 
     void Relocate() {}
 
-    void Execute() {
+    void Execute(std::vector<std::string> envs) {
         unsigned long at_random = getauxval(AT_RANDOM);
         CHECK_NE(at_random, 0);
         LOG() << LOG_BITS(at_random) << std::endl;
@@ -174,6 +174,9 @@ class ELF {
         asm volatile("push $31");  // AT_EXECFN
 
         // Environment variables
+        // for(const auto& s:envs){
+        //     asm volatile("push %0" ::"r"(s.c_str()));
+        // }
         asm volatile("push $0");
 
         // Argument from user
@@ -216,7 +219,7 @@ std::unique_ptr<ELF> ReadELF(const std::string& filename) {
     return std::make_unique<ELF>(filename, p, mapped_size);
 }
 
-int main(int argc, char* const argv[]) {
+int main(int argc, char* const argv[], char** envp) {
     static option long_options[] = {
         {"load", required_argument, nullptr, 'l'},
         {0, 0, 0, 0},
@@ -238,9 +241,14 @@ int main(int argc, char* const argv[]) {
 
     CHECK_LE(optind, argc);
 
+    std::vector<std::string> envs;
+    for (char **env = envp; *env != 0; env++) {
+        envs.emplace_back(*env);
+    }
+
     auto main_binary = ReadELF(file);
     main_binary->Show();
     main_binary->Load();
-    main_binary->Execute();
+    main_binary->Execute(envs);
     main_binary->Unload();
 }

@@ -152,37 +152,48 @@ class ELF {
 
     void Execute(std::vector<std::string> envs) {
         unsigned long at_random = getauxval(AT_RANDOM);
+        unsigned long at_pagesz = getauxval(AT_PAGESZ);
         CHECK_NE(at_random, 0);
-        LOG() << LOG_BITS(at_random) << std::endl;
+        LOG() << LOG_BITS(at_random) << LOG_BITS(at_pagesz) << std::endl;
 
-        LOG() << "Execute start" << LOG_KEY(filename()) << std::endl;
-        const char* cstr = filename().c_str();
+        LOG() << "Execute start " << LOG_KEY(filename()) << std::endl;
+        const char* argv0 = filename().c_str();
+
+        const size_t envsize = envs.size();
+        const char** envps =
+            reinterpret_cast<const char**>(malloc(sizeof(char*) * envsize));
+        for (int i = 0; i < envs.size(); i++) {
+            *(envps + i) = envs[i].c_str();
+        }
 
         // See http://articles.manugarg.com/aboutelfauxiliaryvectors.html for
-        // the stack layout Padding
+        // the stack layout padding.
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // 0
         asm volatile("push $0");  // 0
 
         // Auxiliary vectors
-        asm volatile("push $0");  // 0
+        // TODO(akawashiro): Can we use constants such as AT_RANDOM in assembly?
+        asm volatile("push $0"); 
         asm volatile("push $0");  // AT_NULL
         asm volatile("push %0" ::"r"(at_random));
         asm volatile("push $25");  // AT_RANDOM
-        asm volatile("push %0" ::"m"(cstr));
+        asm volatile("push %0" ::"r"(at_pagesz));
+        asm volatile("push $6");  // AT_PAGESZ
+        asm volatile("push %0" ::"m"(argv0));
         asm volatile("push $31");  // AT_EXECFN
 
         // Environment variables
-        // for(const auto& s:envs){
-        //     asm volatile("push %0" ::"r"(s.c_str()));
-        // }
         asm volatile("push $0");
+        for (int i = 0; i < envsize; i++) {
+            asm volatile("push %0" ::"m"(*(envps + i)));
+        }
 
         // Argument from user
-        asm volatile("push $0");              // argv[argc] (must be NULL)
-        asm volatile("push %0" ::"m"(cstr));  // argv[0]
-        asm volatile("push $1");              // argc
+        asm volatile("push $0");               // argv[argc] (must be NULL)
+        asm volatile("push %0" ::"m"(argv0));  // argv[0]
+        asm volatile("push $1");               // argc
 
         asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
         LOG() << "Execute end" << std::endl;
@@ -219,30 +230,36 @@ std::unique_ptr<ELF> ReadELF(const std::string& filename) {
     return std::make_unique<ELF>(filename, p, mapped_size);
 }
 
+void ShowHelp(std::ostream& os){
+    os << "sloader -- Simple ELF loader" << std::endl;
+}
+
 int main(int argc, char* const argv[], char** envp) {
     static option long_options[] = {
-        {"load", required_argument, nullptr, 'l'},
+        {"help", no_argument, nullptr, 'h'},
         {0, 0, 0, 0},
     };
 
-    std::string file;
-
     int opt;
-    while ((opt = getopt_long(argc, argv, "l:", long_options, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, "h", long_options, nullptr)) != -1) {
         switch (opt) {
-            case 'l':
-                file = optarg;
+            case 'h':
+                ShowHelp(std::cout);
+                return 0;
                 break;
             default:
+                LOG() << "Found unsupported option" << std::endl;
                 CHECK(false);
                 break;
         }
     }
 
-    CHECK_LE(optind, argc);
+    CHECK_LT(optind, argc);
+
+    std::string file = argv[optind++];
 
     std::vector<std::string> envs;
-    for (char **env = envp; *env != 0; env++) {
+    for (char** env = envp; *env != 0; env++) {
         envs.emplace_back(*env);
     }
 

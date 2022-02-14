@@ -150,52 +150,114 @@ class ELF {
 
     void Relocate() {}
 
+    // To variables of stack and stack_num assign to %rdi and %rsi, I use the
+    // calling convention. For details, see A.2.1 Calling Conventions in
+    // https://refspecs.linuxfoundation.org/elf/x86_64-abi-0.99.pdf. Off course,
+    // compiler must not inline this function.
+    void __attribute__((noinline))
+    ExecuteCore(uint64_t* stack, size_t stack_num) {
+        for (int i = 0; i < stack_num; i++) {
+            asm volatile("pushq %0" ::"m"(*(stack + i)));
+        }
+
+        asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
+    }
+
     void Execute(std::vector<std::string> envs) {
         unsigned long at_random = getauxval(AT_RANDOM);
         unsigned long at_pagesz = getauxval(AT_PAGESZ);
         CHECK_NE(at_random, 0);
         LOG() << LOG_BITS(at_random) << LOG_BITS(at_pagesz) << std::endl;
 
-        LOG() << "Execute start " << LOG_KEY(filename()) << std::endl;
-        const char* argv0 = filename().c_str();
+        // Some commented out auxiliary values because they are not appropriate
+        // as loading programs. These values are for sloader itself.
+        std::vector<unsigned long> aux_types{
+            AT_IGNORE,
+            // AT_EXECFD,
+            // AT_PHDR,
+            AT_PHENT,
+            // AT_PHNUM,
+            AT_PAGESZ,
+            // AT_BASE,
+            AT_FLAGS,
+            // AT_ENTRY,
+            AT_NOTELF, AT_UID, AT_EUID, AT_GID, AT_EGID, AT_CLKTCK, AT_PLATFORM,
+            AT_HWCAP, AT_FPUCW, AT_DCACHEBSIZE, AT_ICACHEBSIZE, AT_UCACHEBSIZE,
+            AT_IGNOREPPC, AT_SECURE, AT_BASE_PLATFORM, AT_RANDOM, AT_HWCAP2,
+            // AT_EXECFN,
+            AT_SYSINFO, AT_SYSINFO_EHDR, AT_L1I_CACHESHAPE, AT_L1D_CACHESHAPE,
+            AT_L2_CACHESHAPE, AT_L3_CACHESHAPE, AT_L1I_CACHESIZE,
+            AT_L1I_CACHEGEOMETRY, AT_L1D_CACHESIZE, AT_L1D_CACHEGEOMETRY,
+            AT_L2_CACHESIZE, AT_L2_CACHEGEOMETRY, AT_L3_CACHESIZE,
+            AT_L3_CACHEGEOMETRY, AT_MINSIGSTKSZ};
 
-        const size_t envsize = envs.size();
-        const char** envps =
-            reinterpret_cast<const char**>(malloc(sizeof(char*) * envsize));
-        for (int i = 0; i < envs.size(); i++) {
-            *(envps + i) = envs[i].c_str();
+        std::vector<std::pair<unsigned long, unsigned long>> aux_tvs;
+        for (int i = 0; i < aux_types.size(); i++) {
+            unsigned long v = getauxval(aux_types[i]);
+            if (v != 0) {
+                aux_tvs.emplace_back(std::make_pair(aux_types[i], v));
+                LOG() << LOG_BITS(aux_types[i]) << LOG_BITS(v) << std::endl;
+            }
         }
 
         // See http://articles.manugarg.com/aboutelfauxiliaryvectors.html for
         // the stack layout padding.
-        asm volatile("push $0");  // 0
-        asm volatile("push $0");  // 0
-        asm volatile("push $0");  // 0
-        asm volatile("push $0");  // 0
+        //
+        // 4 words padding
+        // 0
+        // AT_NULL
+        // auxs
+        // NULL
+        // envs
+        // argv[argc] (must be null)
+        // argv[0] = filename
+        // argc
+        size_t stack_index = 0;
+        size_t stack_num = 4 + 2 + 2 * aux_tvs.size() + 1 + envs.size() + 3;
+        size_t stack_size = sizeof(uint64_t) * stack_num;
+        unsigned long* stack = reinterpret_cast<uint64_t*>(malloc(stack_size));
+        memset(stack, 0, stack_size);
 
-        // Auxiliary vectors
-        // TODO(akawashiro): Can we use constants such as AT_RANDOM in assembly?
-        asm volatile("push $0"); 
-        asm volatile("push $0");  // AT_NULL
-        asm volatile("push %0" ::"r"(at_random));
-        asm volatile("push $25");  // AT_RANDOM
-        asm volatile("push %0" ::"r"(at_pagesz));
-        asm volatile("push $6");  // AT_PAGESZ
-        asm volatile("push %0" ::"m"(argv0));
-        asm volatile("push $31");  // AT_EXECFN
+        // 4 words padding
+        stack_index += 4;
 
-        // Environment variables
-        asm volatile("push $0");
-        for (int i = 0; i < envsize; i++) {
-            asm volatile("push %0" ::"m"(*(envps + i)));
+        // First two elements are 0 and AT_NULL.
+        stack_index += 2;
+
+        // auxs
+        for (int i = 0; i < aux_tvs.size(); i++) {
+            *(stack + stack_index) = aux_tvs[i].second;
+            stack_index++;
+            *(stack + stack_index) = aux_tvs[i].first;
+            stack_index++;
         }
 
-        // Argument from user
-        asm volatile("push $0");               // argv[argc] (must be NULL)
-        asm volatile("push %0" ::"m"(argv0));  // argv[0]
-        asm volatile("push $1");               // argc
+        // End of environment variables
+        stack_index++;
 
-        asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
+        // Environment variables
+        for (int i = 0; i < envs.size(); i++) {
+            *(stack + stack_index) =
+                reinterpret_cast<uint64_t>(envs[i].c_str());
+            stack_index++;
+        }
+
+        // argv[argc]
+        stack_index++;
+
+        // argv[0]
+        *(stack + stack_index) = reinterpret_cast<uint64_t>(filename().c_str());
+        stack_index++;
+
+        // argc
+        *(stack + stack_index) = 1;
+        stack_index++;
+
+        CHECK_EQ(stack_index, stack_num);
+
+        ExecuteCore(stack, stack_num);
+
+        free(stack);
         LOG() << "Execute end" << std::endl;
     }
     std::string filename() { return filename_; }
@@ -230,7 +292,7 @@ std::unique_ptr<ELF> ReadELF(const std::string& filename) {
     return std::make_unique<ELF>(filename, p, mapped_size);
 }
 
-void ShowHelp(std::ostream& os){
+void ShowHelp(std::ostream& os) {
     os << "sloader -- Simple ELF loader" << std::endl;
 }
 

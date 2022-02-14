@@ -150,7 +150,7 @@ class ELF {
 
     void Relocate() {}
 
-    // To variables of stack, stack_num and entry assign to %rdi, %rsi and %rdx
+    // To assign variables of stack, stack_num and entry to %rdi, %rsi and %rdx
     // I use the calling convention. For details, see A.2.1 Calling Conventions
     // in https://refspecs.linuxfoundation.org/elf/x86_64-abi-0.99.pdf. Of
     // course, compiler must not inline this function.

@@ -24,11 +24,11 @@
         LOG() << #cond << std::endl; \
         std::abort();                \
     }
-#define CHECK_EQ(a, b)                                                    \
-    if ((a) != (b)) {                                                     \
-        LOG() << #a << "(" << HexString(a) << ")"                         \
-              << " != " << #b << "(" << HexString(b) << ")" << std::endl; \
-        std::abort();                                                     \
+#define CHECK_EQ(a, b)                                         \
+    if ((a) != (b)) {                                          \
+        LOG() << #a << "(" << a << ")"                         \
+              << " != " << #b << "(" << b << ")" << std::endl; \
+        std::abort();                                          \
     }
 #define CHECK_NE(a, b)                            \
     if ((a) == (b)) {                             \
@@ -150,17 +150,17 @@ class ELF {
 
     void Relocate() {}
 
-    // To variables of stack and stack_num assign to %rdi and %rsi, I use the
-    // calling convention. For details, see A.2.1 Calling Conventions in
-    // https://refspecs.linuxfoundation.org/elf/x86_64-abi-0.99.pdf. Off course,
-    // compiler must not inline this function.
+    // To variables of stack, stack_num and entry assign to %rdi, %rsi and %rdx
+    // I use the calling convention. For details, see A.2.1 Calling Conventions
+    // in https://refspecs.linuxfoundation.org/elf/x86_64-abi-0.99.pdf. Of
+    // course, compiler must not inline this function.
     void __attribute__((noinline))
-    ExecuteCore(uint64_t* stack, size_t stack_num) {
+    ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry) {
         for (int i = 0; i < stack_num; i++) {
             asm volatile("pushq %0" ::"m"(*(stack + i)));
         }
 
-        asm volatile("jmp *%0" ::"m"(ehdr()->e_entry));
+        asm volatile("jmp *%0" ::"r"(entry));
     }
 
     void Execute(std::vector<std::string> envs) {
@@ -255,7 +255,7 @@ class ELF {
 
         CHECK_EQ(stack_index, stack_num);
 
-        ExecuteCore(stack, stack_num);
+        ExecuteCore(stack, stack_num, ehdr()->e_entry);
 
         free(stack);
         LOG() << "Execute end" << std::endl;

@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -80,6 +81,17 @@ std::string HexString(T num, int length = -1) {
     ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length)
        << std::hex << +num;
     return ss.str();
+}
+
+std::vector<std::string> SplitWith(std::string str,
+                                   const std::string& delimiter) {
+    std::vector<std::string> ret;
+    size_t pos;
+    while ((pos = str.find(delimiter)) != std::string::npos) {
+        ret.emplace_back(str.substr(0, pos));
+        str.erase(0, pos + delimiter.length());
+    }
+    return ret;
 }
 
 class ELF {
@@ -276,8 +288,9 @@ class ELF {
     std::vector<std::pair<char*, uint32_t>> memories_;
 };
 
-std::unique_ptr<ELF> ReadELF(const std::string& filename) {
-    int fd = open(filename.c_str(), O_RDONLY);
+std::unique_ptr<ELF> ReadELF(const std::filesystem::path& filepath,
+                             const std::string& argv0) {
+    int fd = open(filepath.c_str(), O_RDONLY);
     CHECK(fd >= 0);
 
     size_t size = lseek(fd, 0, SEEK_END);
@@ -289,7 +302,7 @@ std::unique_ptr<ELF> ReadELF(const std::string& filename) {
                           MAP_PRIVATE, fd, 0);
     CHECK(p != MAP_FAILED);
 
-    return std::make_unique<ELF>(filename, p, mapped_size);
+    return std::make_unique<ELF>(argv0, p, mapped_size);
 }
 
 void ShowHelp(std::ostream& os) {
@@ -318,14 +331,32 @@ int main(int argc, char* const argv[], char** envp) {
 
     CHECK_LT(optind, argc);
 
-    std::string file = argv[optind++];
+    std::string argv0 = argv[optind++];
+    std::filesystem::path fullpath;
+
+    if (argv0[0] == '.' || argv0.find("/") != std::string::npos) {
+        fullpath = std::filesystem::path(argv0);
+    } else {
+        std::vector<std::string> path_dirs =
+            SplitWith(std::string(getenv("PATH")), ":");
+        for (const auto& dir : path_dirs) {
+            std::filesystem::path p = std::filesystem::path(dir) / argv0;
+            if (std::filesystem::exists(p)) {
+                fullpath = p;
+                break;
+            }
+        }
+    }
+
+    LOG() << LOG_KEY(fullpath) << std::endl;
+    CHECK(std::filesystem::exists(fullpath));
 
     std::vector<std::string> envs;
     for (char** env = envp; *env != 0; env++) {
         envs.emplace_back(*env);
     }
 
-    auto main_binary = ReadELF(file);
+    auto main_binary = ReadELF(fullpath, argv0);
     main_binary->Show();
     main_binary->Load();
     main_binary->Execute(envs);

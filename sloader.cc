@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -15,41 +16,86 @@
 #include <string>
 #include <vector>
 
-#define LOG() std::cerr << __FILE__ << ":" << __LINE__ << " "
+constexpr int DEBUG = 0;
+constexpr int INFO = 1;
+constexpr int WARNING = 2;
+constexpr int ERROR = 3;
+constexpr int FATAL = 4;
+
+std::string LevelToString(int level) {
+    switch (level) {
+        case DEBUG:
+            return "D";
+        case INFO:
+            return "I";
+        case WARNING:
+            return "W";
+        case ERROR:
+            return "E";
+        case FATAL:
+            return "F";
+        default:
+            std::abort();
+    }
+}
+
+int StringToLevel(std::string s) {
+    if (s == "DEBUG") return DEBUG;
+    if (s == "INFO") return INFO;
+    if (s == "WARNING") return WARNING;
+    if (s == "ERROR") return ERROR;
+    if (s == "FATAL") return FATAL;
+    std::abort();
+}
+
+int LOG_LEVEL = INFO;
+
+std::ofstream null_stream("/dev/null");
+
+// TODO(akawashiro): Emit std::endl at the end of each message. Not the head!.
+// TODO(akawashiro): After implementing FATAL, remove all std::abort().
+#define LOG(level)                                   \
+    ((LOG_LEVEL <= level) ? std::cerr : null_stream) \
+        << std::endl                                 \
+        << LevelToString(level) << " " << __FILE__ << ":" << __LINE__ << " "
 #define LOG_KEY_VALUE(key, value) key << "=" << value << " "
 #define LOG_KEY(key) LOG_KEY_VALUE(#key, key)
 #define LOG_BITS(key) LOG_KEY_VALUE(#key, HexString(key))
 
-#define CHECK(cond)                  \
-    if (!(cond)) {                   \
-        LOG() << #cond << std::endl; \
-        std::abort();                \
+#define CHECK(cond)                       \
+    if (!(cond)) {                        \
+        LOG(ERROR) << #cond << std::endl; \
+        std::abort();                     \
     }
-#define CHECK_EQ(a, b)                                         \
-    if ((a) != (b)) {                                          \
-        LOG() << #a << "(" << a << ")"                         \
-              << " != " << #b << "(" << b << ")" << std::endl; \
-        std::abort();                                          \
+#define CHECK_EQ(a, b)                                              \
+    if ((a) != (b)) {                                               \
+        LOG(ERROR) << #a << "(" << a << ")"                         \
+                   << " != " << #b << "(" << b << ")" << std::endl; \
+        std::abort();                                               \
     }
-#define CHECK_NE(a, b)                            \
-    if ((a) == (b)) {                             \
-        LOG() << #a << " == " << #b << std::endl; \
-        std::abort();                             \
+#define CHECK_NE(a, b)                                              \
+    if ((a) == (b)) {                                               \
+        LOG(ERROR) << #a << "(" << a << ")"                         \
+                   << " == " << #b << "(" << b << ")" << std::endl; \
+        std::abort();                                               \
     }
-#define CHECK_GT(a, b)                            \
-    if ((a) <= (b)) {                             \
-        LOG() << #a << " <= " << #b << std::endl; \
-        std::abort();                             \
+#define CHECK_GT(a, b)                                              \
+    if ((a) <= (b)) {                                               \
+        LOG(ERROR) << #a << "(" << a << ")"                         \
+                   << " <= " << #b << "(" << b << ")" << std::endl; \
+        std::abort();                                               \
     }
-#define CHECK_LE(a, b)                           \
-    if ((a) > (b)) {                             \
-        LOG() << #a << " > " << #b << std::endl; \
-        std::abort();                            \
+#define CHECK_LE(a, b)                                             \
+    if ((a) > (b)) {                                               \
+        LOG(ERROR) << #a << "(" << a << ")"                        \
+                   << " > " << #b << "(" << b << ")" << std::endl; \
+        std::abort();                                              \
     }
-#define CHECK_LT(a, b)                           \
-    if ((a) >= (b)) {                            \
-        LOG() << #a << " > " << #b << std::endl; \
-        std::abort();                            \
+#define CHECK_LT(a, b)                                              \
+    if ((a) >= (b)) {                                               \
+        LOG(ERROR) << #a << "(" << a << ")"                         \
+                   << " >= " << #b << "(" << b << ")" << std::endl; \
+        std::abort();                                               \
     }
 
 std::string HexString(char* num, int length = -1) {
@@ -105,7 +151,7 @@ class ELF {
                 head_ + ehdr()->e_phoff + i * ehdr()->e_phentsize));
         }
         for (auto ph : phdrs()) {
-            LOG() << LOG_BITS(ph->p_type) << std::endl;
+            LOG(INFO) << LOG_BITS(ph->p_type);
             if (ph->p_type == PT_DYNAMIC) {
                 CHECK(ph_dynamic_ == NULL);
                 ph_dynamic_ = ph;
@@ -114,22 +160,22 @@ class ELF {
     }
 
     void Show() {
-        LOG() << "Ehdr:" << LOG_BITS(ehdr()->e_entry) << LOG_BITS(size_)
-              << LOG_BITS(head_) << std::endl;
+        LOG(INFO) << "Ehdr:" << LOG_BITS(ehdr()->e_entry) << LOG_BITS(size_)
+                  << LOG_BITS(head_);
         for (auto p : phdrs()) {
-            LOG() << "Phdr:" << LOG_BITS(p->p_vaddr) << LOG_BITS(p->p_offset)
-                  << LOG_BITS(p->p_filesz) << std::endl;
+            LOG(INFO) << "Phdr:" << LOG_BITS(p->p_vaddr)
+                      << LOG_BITS(p->p_offset) << LOG_BITS(p->p_filesz);
         }
     }
 
     void Load() {
-        LOG() << "Load start" << std::endl;
+        LOG(INFO) << "Load start";
         for (auto ph : phdrs()) {
             if (ph->p_type != PT_LOAD) {
                 continue;
             }
-            LOG() << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
-                  << LOG_BITS(ph->p_memsz) << std::endl;
+            LOG(INFO) << LOG_BITS(reinterpret_cast<void*>(ph->p_vaddr))
+                      << LOG_BITS(ph->p_memsz);
             void* mmap_start =
                 reinterpret_cast<void*>((ph->p_vaddr) & (~(0xfff)));
             void* mmap_end = reinterpret_cast<void*>(
@@ -139,19 +185,19 @@ class ELF {
             char* p = reinterpret_cast<char*>(
                 mmap(mmap_start, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-            LOG() << "mmap: " << LOG_KEY(filename()) << LOG_BITS(p)
-                  << LOG_BITS(ph->p_vaddr) << std::endl;
+            LOG(INFO) << "mmap: " << LOG_KEY(filename()) << LOG_BITS(p)
+                      << LOG_BITS(ph->p_vaddr);
             CHECK_EQ(mmap_start, p);
             CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph->p_vaddr);
             CHECK_LT(ph->p_vaddr + ph->p_memsz,
                      reinterpret_cast<Elf64_Addr>(mmap_end));
-            LOG() << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
-                  << LOG_BITS(ph->p_filesz) << std::endl;
+            LOG(INFO) << LOG_BITS(p) << LOG_BITS(head() + ph->p_offset)
+                      << LOG_BITS(ph->p_filesz);
             memcpy(reinterpret_cast<void*>(ph->p_vaddr), head() + ph->p_offset,
                    ph->p_filesz);
             memories_.emplace_back(std::make_pair(p, ph->p_memsz));
         }
-        LOG() << "Load end" << std::endl;
+        LOG(INFO) << "Load end";
     }
 
     void Unload() {
@@ -179,7 +225,7 @@ class ELF {
         unsigned long at_random = getauxval(AT_RANDOM);
         unsigned long at_pagesz = getauxval(AT_PAGESZ);
         CHECK_NE(at_random, 0);
-        LOG() << LOG_BITS(at_random) << LOG_BITS(at_pagesz) << std::endl;
+        LOG(INFO) << LOG_BITS(at_random) << LOG_BITS(at_pagesz);
 
         // Some commented out auxiliary values because they are not appropriate
         // as loading programs. These values are for sloader itself.
@@ -208,7 +254,7 @@ class ELF {
             unsigned long v = getauxval(aux_types[i]);
             if (v != 0) {
                 aux_tvs.emplace_back(std::make_pair(aux_types[i], v));
-                LOG() << LOG_BITS(aux_types[i]) << LOG_BITS(v) << std::endl;
+                LOG(INFO) << LOG_BITS(aux_types[i]) << LOG_BITS(v);
             }
         }
 
@@ -270,7 +316,7 @@ class ELF {
         ExecuteCore(stack, stack_num, ehdr()->e_entry);
 
         free(stack);
-        LOG() << "Execute end" << std::endl;
+        LOG(INFO) << "Execute end";
     }
     std::string filename() { return filename_; }
     Elf64_Ehdr* ehdr() { return ehdr_; }
@@ -310,6 +356,10 @@ void ShowHelp(std::ostream& os) {
 }
 
 int main(int argc, char* const argv[], char** envp) {
+    if (getenv("SLOADER_LOG_LEVEL") != NULL) {
+        LOG_LEVEL = StringToLevel(std::string(getenv("SLOADER_LOG_LEVEL")));
+    }
+
     static option long_options[] = {
         {"help", no_argument, nullptr, 'h'},
         {0, 0, 0, 0},
@@ -323,7 +373,7 @@ int main(int argc, char* const argv[], char** envp) {
                 return 0;
                 break;
             default:
-                LOG() << "Found unsupported option" << std::endl;
+                LOG(INFO) << "Found unsupported option";
                 CHECK(false);
                 break;
         }
@@ -348,7 +398,7 @@ int main(int argc, char* const argv[], char** envp) {
         }
     }
 
-    LOG() << LOG_KEY(fullpath) << std::endl;
+    LOG(INFO) << LOG_KEY(fullpath);
     CHECK(std::filesystem::exists(fullpath));
 
     std::vector<std::string> envs;

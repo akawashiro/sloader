@@ -25,12 +25,12 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/CTestCustom.cmake
 
 add_test(
   NAME hello_static_libc_test
-  COMMAND ./sloader --load hello_static_libc
+  COMMAND ./sloader ./hello_static_libc
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 add_test(
   NAME print_env_aux_test
-  COMMAND ./sloader --load print_env_aux 
+  COMMAND ./sloader ./print_env_aux
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 if(CUSTOM_LIBC_PATH)
@@ -47,7 +47,7 @@ if(CUSTOM_LIBC_PATH)
       --print-file-name=crtend.o` ${CUSTOM_LIBC_PATH}/lib/crtn.o)
   add_test(
     NAME hello_static_custom_libc_test
-    COMMAND ./sloader --load hello_static_custom_libc
+    COMMAND ./sloader ./hello_static_custom_libc
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
@@ -58,5 +58,5 @@ add_custom_target(
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 add_test(
   NAME hello_asm_test
-  COMMAND ./sloader --load hello_asm
+  COMMAND ./sloader ./hello_asm
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

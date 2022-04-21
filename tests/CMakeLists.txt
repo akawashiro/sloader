@@ -27,3 +27,7 @@ add_test(
   NAME hello_asm_test
   COMMAND ./sloader ./tests/hello_asm
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+add_subdirectory(find_a_depending_so)
+
+add_subdirectory(hello_ET_DYN)

@@ -140,12 +140,28 @@ std::vector<std::string> SplitWith(std::string str,
     return ret;
 }
 
+Elf64_Half GetEType(const std::filesystem::path& filepath) {
+    int fd = open(filepath.c_str(), O_RDONLY);
+    CHECK(fd >= 0);
+
+    size_t size = lseek(fd, 0, SEEK_END);
+    CHECK_GT(size, 8 + 16);
+
+    size_t mapped_size = (size + 0xfff) & ~0xfff;
+
+    char* p = (char*)mmap(NULL, mapped_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+                          MAP_PRIVATE, fd, 0);
+    CHECK(p != MAP_FAILED);
+
+    Elf64_Ehdr* ehdr = reinterpret_cast<Elf64_Ehdr*>(p);
+    return ehdr->e_type;
+}
+
 class ELF {
    public:
     ELF(const std::string& filename, char* head, const size_t size)
         : filename_(filename), head_(head), size_(size) {
         ehdr_ = reinterpret_cast<Elf64_Ehdr*>(head);
-        CHECK_EQ(ehdr()->e_type, ET_EXEC);
         for (uint16_t i = 0; i < ehdr()->e_phnum; i++) {
             phdrs_.emplace_back(reinterpret_cast<Elf64_Phdr*>(
                 head_ + ehdr()->e_phoff + i * ehdr()->e_phentsize));
@@ -406,9 +422,16 @@ int main(int argc, char* const argv[], char** envp) {
         envs.emplace_back(*env);
     }
 
-    auto main_binary = ReadELF(fullpath, argv0);
-    main_binary->Show();
-    main_binary->Load();
-    main_binary->Execute(envs);
-    main_binary->Unload();
+    Elf64_Half etype = GetEType(fullpath);
+    if (etype == ET_EXEC) {
+        auto main_binary = ReadELF(fullpath, argv0);
+        main_binary->Show();
+        main_binary->Load();
+        main_binary->Execute(envs);
+        main_binary->Unload();
+    } else if (etype == ET_DYN) {
+        // TODO
+    } else {
+        LOG(FATAL) << "Unsupported etype = " << LOG_KEY(etype);
+    }
 }

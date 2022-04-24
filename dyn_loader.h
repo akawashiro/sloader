@@ -13,21 +13,28 @@ class ELFBinary {
 
         size_t mapped_size = (size + 0xfff) & ~0xfff;
 
-        head_ =
+        file_base_addr_ =
             (char*)mmap(NULL, mapped_size, PROT_READ | PROT_WRITE | PROT_EXEC,
                         MAP_PRIVATE, fd, 0);
-        CHECK(head_ != MAP_FAILED);
+        CHECK(file_base_addr_ != MAP_FAILED);
 
-        ehdr_ = *reinterpret_cast<Elf64_Ehdr*>(head_);
+        ehdr_ = *reinterpret_cast<Elf64_Ehdr*>(file_base_addr_);
         for (uint16_t i = 0; i < ehdr_.e_phnum; i++) {
-            phdrs_.emplace_back(*reinterpret_cast<Elf64_Phdr*>(
-                head_ + ehdr_.e_phoff + i * ehdr_.e_phentsize));
+            Elf64_Phdr ph = *reinterpret_cast<Elf64_Phdr*>(
+                file_base_addr_ + ehdr_.e_phoff + i * ehdr_.e_phentsize);
+            file_phdrs_.emplace_back(ph);
+
+            if (ph.p_type == PT_DYNAMIC) {
+                LOG(INFO) << "Found PT_DYNAMIC";
+                file_dynamic_ = ph;
+            }
         }
     }
 
     void Load(Elf64_Addr base_addr) {
+        base_addr_ = base_addr;
         LOG(INFO) << "Load start " << path_;
-        for (auto ph : phdrs_) {
+        for (auto ph : file_phdrs_) {
             if (ph.p_type != PT_LOAD) {
                 continue;
             }
@@ -49,18 +56,54 @@ class ELFBinary {
                      ph.p_vaddr + base_addr);
             CHECK_LT(ph.p_vaddr + base_addr + ph.p_memsz,
                      reinterpret_cast<Elf64_Addr>(mmap_end));
-            LOG(INFO) << LOG_BITS(mmap_start) << LOG_BITS(head_ + ph.p_offset)
+            LOG(INFO) << LOG_BITS(mmap_start)
+                      << LOG_BITS(file_base_addr_ + ph.p_offset)
                       << LOG_BITS(ph.p_filesz);
-            memcpy(mmap_start, head_ + ph.p_offset, ph.p_filesz);
+            memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr),
+                   file_base_addr_ + ph.p_offset, ph.p_filesz);
         }
         LOG(INFO) << "Load end";
+
+        LOG(INFO) << "ParseDynamic start";
+        ParseDynamic();
+        LOG(INFO) << "ParseDynamic end";
+    }
+
+    void ParseDynamic() {
+        const size_t dyn_size = sizeof(Elf64_Dyn);
+        CHECK_EQ(file_dynamic_.p_filesz % dyn_size, 0);
+
+        for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
+            LOG(INFO) << LOG_KEY(i);
+            Elf64_Dyn* dyn = reinterpret_cast<Elf64_Dyn*>(
+                base_addr_ + file_dynamic_.p_offset + dyn_size * i);
+            if (dyn->d_tag == DT_STRTAB) {
+                LOG(INFO) << "Found DT_STRTAB";
+                strtab_ = reinterpret_cast<char*>(dyn->d_un.d_ptr + base_addr_);
+            }
+        }
+
+        CHECK_NE(strtab_, nullptr);
+
+        for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
+            Elf64_Dyn* dyn = reinterpret_cast<Elf64_Dyn*>(
+                base_addr_ + file_dynamic_.p_offset + dyn_size * i);
+            if (dyn->d_tag == DT_NEEDED) {
+                std::string needed = strtab_ + dyn->d_un.d_val;
+                neededs_.emplace_back(needed);
+            }
+        }
     }
 
    private:
     const std::filesystem::path path_;
-    char* head_;
+    char* file_base_addr_;
+    Elf64_Addr base_addr_ = 0;
     Elf64_Ehdr ehdr_;
-    std::vector<Elf64_Phdr> phdrs_;
+    std::vector<Elf64_Phdr> file_phdrs_;
+    Elf64_Phdr file_dynamic_;
+    std::vector<std::string> neededs_;
+    char* strtab_ = nullptr;
 };
 
 class DynLoader {

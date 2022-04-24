@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "dyn_loader.h"
 #include "exec_loader.h"
 #include "utils.h"
 
@@ -99,7 +100,7 @@ int main(int argc, char* const argv[], char** envp) {
         exec_loader->Execute(envs);
         exec_loader->Unload();
     } else if (etype == ET_DYN) {
-        // TODO
+        auto dyn_loader = MakeDynLoader(fullpath);
     } else {
         LOG(FATAL) << "Unsupported etype = " << LOG_KEY(etype);
     }

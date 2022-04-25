@@ -1,8 +1,51 @@
 #pragma once
 
+#include <glob.h>
+
 #include <optional>
+#include <queue>
+#include <set>
+#include <tuple>
 
 #include "utils.h"
+
+namespace {
+void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res,
+                       const std::string& filename) {
+    std::ifstream f;
+    f.open(filename);
+    if (!f) {
+        return;
+    }
+    std::string head;
+    while (f >> head) {
+        if (head.substr(0, 1) == "#") {
+            std::string comment;
+            std::getline(f, comment);
+        } else if (head == "include") {
+            std::string descendants;
+            f >> descendants;
+
+            glob_t globbuf;
+            glob(descendants.c_str(), 0, NULL, &globbuf);
+            for (int i = 0; i < globbuf.gl_pathc; i++) {
+                read_ldsoconf_dfs(res, globbuf.gl_pathv[i]);
+            }
+            globfree(&globbuf);
+        } else {
+            res.push_back(head);
+        }
+    }
+}
+
+}  // namespace
+
+std::vector<std::filesystem::path> read_ldsoconf() {
+    std::vector<std::filesystem::path> res;
+    read_ldsoconf_dfs(res, "/etc/ld.so.conf");
+
+    return res;
+}
 
 class ELFBinary {
    public:
@@ -47,7 +90,7 @@ class ELFBinary {
                 reinterpret_cast<void*>((ph.p_vaddr + base_addr) & (~(0xfff)));
             void* mmap_end = reinterpret_cast<void*>(
                 ((ph.p_vaddr + ph.p_memsz + base_addr) + 0xfff) & (~(0xfff)));
-            end_addr_ = mmap_end;
+            end_addr_ = reinterpret_cast<Elf64_Addr>(mmap_end);
             size_t mmap_size = reinterpret_cast<size_t>(mmap_end) -
                                reinterpret_cast<size_t>(mmap_start);
             char* p = reinterpret_cast<char*>(
@@ -130,8 +173,39 @@ class ELFBinary {
 class DynLoader {
    public:
     DynLoader(const std::filesystem::path& main_path) : main_path_(main_path) {
+        Elf64_Addr base_addr = 0x400000;
         binaries_.emplace_back(ELFBinary(main_path));
-        binaries_[0].Load(0x400000);
+        binaries_.back().Load(base_addr);
+        base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 *
+                    0x400000;
+
+        std::queue<std::tuple<std::string, std::optional<std::filesystem::path>,
+                              std::optional<std::filesystem::path>>>
+            queue;
+        std::set<std::string> loaded;
+
+        for (const auto& n : binaries_.back().neededs()) {
+            queue.push(std::make_tuple(n, binaries_.back().runpath(),
+                                       binaries_.back().rpath()));
+        }
+
+        while (!queue.empty()) {
+            const auto [library_name, runpath, rpath] = queue.front();
+            queue.pop();
+
+            if (loaded.count(library_name) != 0) continue;
+            loaded.insert(library_name);
+
+            const auto library_path = FindLibrary(library_name, runpath, rpath);
+            binaries_.emplace_back(ELFBinary(library_path));
+            binaries_.back().Load(base_addr);
+            base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) /
+                        0x400000 * 0x400000;
+            for (const auto& n : binaries_.back().neededs()) {
+                queue.push(std::make_tuple(n, binaries_.back().runpath(),
+                                           binaries_.back().rpath()));
+            }
+        }
     }
 
    private:
@@ -145,6 +219,9 @@ class DynLoader {
         if (rpath) {
             library_directory.emplace_back(rpath.value());
         }
+        const auto ldsoconfs = read_ldsoconf();
+        library_directory.insert(library_directory.end(), ldsoconfs.begin(),
+                                 ldsoconfs.end());
         library_directory.emplace_back("/lib");
         library_directory.emplace_back("/usr/lib");
         library_directory.emplace_back("/usr/lib64");
@@ -156,6 +233,7 @@ class DynLoader {
             }
         }
         LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
+        std::abort();
     }
     std::filesystem::path main_path_;
     std::vector<ELFBinary> binaries_;

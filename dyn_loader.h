@@ -74,9 +74,8 @@ class ELFBinary {
         CHECK_EQ(file_dynamic_.p_filesz % dyn_size, 0);
 
         for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
-            LOG(INFO) << LOG_KEY(i);
             Elf64_Dyn* dyn = reinterpret_cast<Elf64_Dyn*>(
-                base_addr_ + file_dynamic_.p_offset + dyn_size * i);
+                base_addr_ + file_dynamic_.p_vaddr + dyn_size * i);
             if (dyn->d_tag == DT_STRTAB) {
                 LOG(INFO) << "Found DT_STRTAB";
                 strtab_ = reinterpret_cast<char*>(dyn->d_un.d_ptr + base_addr_);
@@ -87,10 +86,11 @@ class ELFBinary {
 
         for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
             Elf64_Dyn* dyn = reinterpret_cast<Elf64_Dyn*>(
-                base_addr_ + file_dynamic_.p_offset + dyn_size * i);
+                base_addr_ + file_dynamic_.p_vaddr + dyn_size * i);
             if (dyn->d_tag == DT_NEEDED) {
                 std::string needed = strtab_ + dyn->d_un.d_val;
                 neededs_.emplace_back(needed);
+                LOG(INFO) << LOG_KEY(needed);
             }
         }
     }

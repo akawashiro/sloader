@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "utils.h"
 
 class ELFBinary {
@@ -33,6 +35,7 @@ class ELFBinary {
 
     void Load(Elf64_Addr base_addr) {
         base_addr_ = base_addr;
+        end_addr_ = base_addr_;
         LOG(INFO) << "Load start " << path_;
         for (auto ph : file_phdrs_) {
             if (ph.p_type != PT_LOAD) {
@@ -44,6 +47,7 @@ class ELFBinary {
                 reinterpret_cast<void*>((ph.p_vaddr + base_addr) & (~(0xfff)));
             void* mmap_end = reinterpret_cast<void*>(
                 ((ph.p_vaddr + ph.p_memsz + base_addr) + 0xfff) & (~(0xfff)));
+            end_addr_ = mmap_end;
             size_t mmap_size = reinterpret_cast<size_t>(mmap_end) -
                                reinterpret_cast<size_t>(mmap_start);
             char* p = reinterpret_cast<char*>(
@@ -91,18 +95,35 @@ class ELFBinary {
                 std::string needed = strtab_ + dyn->d_un.d_val;
                 neededs_.emplace_back(needed);
                 LOG(INFO) << LOG_KEY(needed);
+            } else if (dyn->d_tag == DT_RUNPATH) {
+                // TODO: Handle relative path
+                runpath_ = strtab_ + dyn->d_un.d_val;
+            } else if (dyn->d_tag == DT_RPATH) {
+                // TODO: Handle relative path
+                rpath_ = strtab_ + dyn->d_un.d_val;
             }
         }
     }
+
+    std::vector<std::string> neededs() { return neededs_; }
+
+    std::optional<std::filesystem::path> runpath() { return runpath_; }
+
+    std::optional<std::filesystem::path> rpath() { return rpath_; }
+
+    Elf64_Addr end_addr() { return end_addr_; }
 
    private:
     const std::filesystem::path path_;
     char* file_base_addr_;
     Elf64_Addr base_addr_ = 0;
+    Elf64_Addr end_addr_ = 0;
     Elf64_Ehdr ehdr_;
     std::vector<Elf64_Phdr> file_phdrs_;
     Elf64_Phdr file_dynamic_;
     std::vector<std::string> neededs_;
+    std::optional<std::filesystem::path> runpath_ = std::nullopt;
+    std::optional<std::filesystem::path> rpath_ = std::nullopt;
     char* strtab_ = nullptr;
 };
 
@@ -114,6 +135,28 @@ class DynLoader {
     }
 
    private:
+    std::filesystem::path FindLibrary(
+        std::string library_name, std::optional<std::filesystem::path> runpath,
+        std::optional<std::filesystem::path> rpath) {
+        std::vector<std::filesystem::path> library_directory;
+        if (runpath) {
+            library_directory.emplace_back(runpath.value());
+        }
+        if (rpath) {
+            library_directory.emplace_back(rpath.value());
+        }
+        library_directory.emplace_back("/lib");
+        library_directory.emplace_back("/usr/lib");
+        library_directory.emplace_back("/usr/lib64");
+
+        for (const auto& d : library_directory) {
+            std::filesystem::path p = d / library_name;
+            if (std::filesystem::exists(p)) {
+                return p;
+            }
+        }
+        LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
+    }
     std::filesystem::path main_path_;
     std::vector<ELFBinary> binaries_;
 };

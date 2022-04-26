@@ -197,6 +197,10 @@ class DynLoader {
 
             if (loaded.count(library_name) != 0) continue;
             loaded.insert(library_name);
+            if (library_name.find("ld-linux") != std::string::npos) {
+                LOG(INFO) << "Skip " << library_name;
+                continue;
+            }
 
             const auto library_path = FindLibrary(library_name, runpath, rpath);
             binaries_.emplace_back(ELFBinary(library_path));

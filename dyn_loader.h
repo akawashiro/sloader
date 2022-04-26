@@ -14,7 +14,9 @@ void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res,
                        const std::string& filename) {
     std::ifstream f;
     f.open(filename);
-    if (!f) {
+
+    // TODO: Workaround not to load i386 libs.
+    if (!f || filename.find("i386") != std::string::npos) {
         return;
     }
     std::string head;

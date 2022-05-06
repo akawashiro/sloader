@@ -116,9 +116,13 @@ void ELFBinary::Load(Elf64_Addr base_addr) {
 }
 
 void ELFBinary::ParseDynamic() {
+    // Must mmap PT_LOADs before call ParseDynamic.
+    CHECK_NE(base_addr_, 0);
+
     const size_t dyn_size = sizeof(Elf64_Dyn);
     CHECK_EQ(file_dynamic_.p_filesz % dyn_size, 0);
 
+    // Search DT_STRTAB at first.
     for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
         Elf64_Dyn* dyn = reinterpret_cast<Elf64_Dyn*>(
             base_addr_ + file_dynamic_.p_vaddr + dyn_size * i);
@@ -143,6 +147,24 @@ void ELFBinary::ParseDynamic() {
         } else if (dyn->d_tag == DT_RPATH) {
             // TODO: Handle relative path
             rpath_ = strtab_ + dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_RELA) {
+            LOG(INFO) << "Found DT_RELA";
+            rela_ = reinterpret_cast<Elf64_Rela*>(base_addr_ + dyn->d_un.d_val);
+        } else if (dyn->d_tag == DT_RELASZ) {
+            relasz_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_RELAENT) {
+            relaent_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_RELACOUNT) {
+            relacount_ = dyn->d_un.d_val;
+        }
+    }
+
+    LOG(INFO) << LOG_KEY(relasz_) << LOG_KEY(relaent_) << LOG_KEY(relacount_);
+    if (rela_ != nullptr) {
+        CHECK_EQ(relasz_ % relaent_, 0);
+        Elf64_Rela* r = rela_;
+        for (int i = 0; i < relasz_ / relaent_; i++, r++) {
+            relas_.emplace_back(*r);
         }
     }
 }

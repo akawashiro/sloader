@@ -28,6 +28,11 @@ class ELFBinary {
     Elf64_Addr base_addr_ = 0;
     Elf64_Addr end_addr_ = 0;
     Elf64_Ehdr ehdr_;
+    Elf64_Rela* rela_ = nullptr;
+    std::vector<Elf64_Rela> relas_;
+    Elf64_Xword relasz_ = 0;
+    Elf64_Xword relacount_ = 0;  // What's this?
+    Elf64_Xword relaent_ = 0;
     std::vector<Elf64_Phdr> file_phdrs_;
     Elf64_Phdr file_dynamic_;
     std::vector<std::string> neededs_;

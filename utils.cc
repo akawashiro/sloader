@@ -161,3 +161,10 @@ std::string ShowRela(const Elf64_Rela& r) {
        << ", r_addend=" << LOG_32BITS(r.r_addend) << "}";
     return ss.str();
 }
+
+std::string ShowSym(const Elf64_Sym& s, const char* strtab) {
+    std::stringstream ss;
+    std::string name = strtab + s.st_name;
+    ss << "Elf64_Sym{st_name=" << name << "}";
+    return ss.str();
+}

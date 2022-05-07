@@ -89,3 +89,5 @@ std::vector<std::string> SplitWith(std::string str,
                                    const std::string& delimiter);
 
 std::string ShowRela(const Elf64_Rela& r);
+
+std::string ShowSym(const Elf64_Sym& s, const char* strtab);

@@ -38,12 +38,16 @@ class ELFBinary {
     Elf64_Xword pltrelsz_ = 0;
     Elf64_Xword pltrel_ = 0;
     Elf64_Xword pltrelent_ = 0;
+    Elf64_Sym* symtab_ = nullptr;
+    std::vector<Elf64_Sym> symtabs_;
+    Elf64_Xword syment_ = 0;
     std::vector<Elf64_Phdr> file_phdrs_;
     Elf64_Phdr file_dynamic_;
     std::vector<std::string> neededs_;
     std::optional<std::filesystem::path> runpath_ = std::nullopt;
     std::optional<std::filesystem::path> rpath_ = std::nullopt;
     char* strtab_ = nullptr;
+    Elf64_Xword strsz_ = 0;
 };
 
 class DynLoader {

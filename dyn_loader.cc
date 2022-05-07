@@ -129,6 +129,9 @@ void ELFBinary::ParseDynamic() {
         if (dyn->d_tag == DT_STRTAB) {
             LOG(INFO) << "Found DT_STRTAB";
             strtab_ = reinterpret_cast<char*>(dyn->d_un.d_ptr + base_addr_);
+        } else if (dyn->d_tag == DT_STRSZ) {
+            LOG(INFO) << "Found DT_STRSZ";
+            strsz_ = dyn->d_un.d_val;
         }
     }
 
@@ -166,6 +169,12 @@ void ELFBinary::ParseDynamic() {
             CHECK(pltrel_ == DT_RELA || pltrel_ == DT_REL);
             pltrelent_ =
                 (pltrel_ == DT_RELA) ? sizeof(Elf64_Rela) : sizeof(Elf64_Rel);
+        } else if (dyn->d_tag == DT_SYMTAB) {
+            symtab_ =
+                reinterpret_cast<Elf64_Sym*>(base_addr_ + dyn->d_un.d_val);
+        } else if (dyn->d_tag == DT_SYMENT) {
+            syment_ = dyn->d_un.d_val;
+            CHECK_EQ(syment_, sizeof(Elf64_Sym));
         }
     }
 
@@ -187,6 +196,23 @@ void ELFBinary::ParseDynamic() {
         for (int i = 0; i < pltrelsz_ / pltrelent_; i++, r++) {
             pltrelas_.emplace_back(*r);
             LOG(INFO) << ShowRela(pltrelas_.back());
+        }
+    }
+
+    if (symtab_ != nullptr) {
+        Elf64_Sym* s = symtab_;
+        symtabs_.emplace_back(*s);
+        s++;
+
+        // TODO: This is a hack. Listing up all symbols is always difficult.
+        while (0 <= s->st_name && s->st_name < strsz_) {
+            symtabs_.emplace_back(*s);
+            s++;
+        }
+
+        for (const auto& s : symtabs_) {
+            LOG(INFO) << LOG_KEY(s.st_name);
+            LOG(INFO) << ShowSym(s, strtab_);
         }
     }
 }

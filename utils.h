@@ -1,5 +1,7 @@
 #pragma once
 
+#include <elf.h>
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -29,6 +31,8 @@ extern std::ofstream null_stream;
 #define LOG_KEY_VALUE(key, value) key << "=" << value << " "
 #define LOG_KEY(key) LOG_KEY_VALUE(#key, key)
 #define LOG_BITS(key) LOG_KEY_VALUE(#key, HexString(key))
+#define LOG_16BITS(key) LOG_KEY_VALUE(#key, HexString(key, 4))
+#define LOG_32BITS(key) LOG_KEY_VALUE(#key, HexString(key, 8))
 
 #define CHECK(cond)                       \
     if (!(cond)) {                        \

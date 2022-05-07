@@ -175,6 +175,7 @@ void ELFBinary::ParseDynamic() {
         Elf64_Rela* r = rela_;
         for (int i = 0; i < relasz_ / relaent_; i++, r++) {
             relas_.emplace_back(*r);
+            LOG(INFO) << ShowRela(relas_.back());
         }
     }
 
@@ -185,6 +186,7 @@ void ELFBinary::ParseDynamic() {
         Elf64_Rela* r = jmprel_;
         for (int i = 0; i < pltrelsz_ / pltrelent_; i++, r++) {
             pltrelas_.emplace_back(*r);
+            LOG(INFO) << ShowRela(pltrelas_.back());
         }
     }
 }

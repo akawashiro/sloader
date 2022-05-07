@@ -156,6 +156,16 @@ void ELFBinary::ParseDynamic() {
             relaent_ = dyn->d_un.d_val;
         } else if (dyn->d_tag == DT_RELACOUNT) {
             relacount_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_JMPREL) {
+            jmprel_ =
+                reinterpret_cast<Elf64_Rela*>(base_addr_ + dyn->d_un.d_val);
+        } else if (dyn->d_tag == DT_PLTRELSZ) {
+            pltrelsz_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_PLTREL) {
+            pltrel_ = dyn->d_un.d_val;
+            CHECK(pltrel_ == DT_RELA || pltrel_ == DT_REL);
+            pltrelent_ =
+                (pltrel_ == DT_RELA) ? sizeof(Elf64_Rela) : sizeof(Elf64_Rel);
         }
     }
 
@@ -165,6 +175,16 @@ void ELFBinary::ParseDynamic() {
         Elf64_Rela* r = rela_;
         for (int i = 0; i < relasz_ / relaent_; i++, r++) {
             relas_.emplace_back(*r);
+        }
+    }
+
+    LOG(INFO) << LOG_KEY(pltrelsz_) << LOG_KEY(pltrelent_);
+    if (jmprel_ != nullptr) {
+        CHECK_EQ(pltrelsz_ % pltrelent_, 0);
+        CHECK_EQ(pltrel_, DT_RELA);
+        Elf64_Rela* r = jmprel_;
+        for (int i = 0; i < pltrelsz_ / pltrelent_; i++, r++) {
+            pltrelas_.emplace_back(*r);
         }
     }
 }

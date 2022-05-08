@@ -25,6 +25,7 @@ class ELFBinary {
     const std::filesystem::path path() const { return path_; }
     const std::vector<Elf64_Rela> relas() const { return relas_; }
     const std::vector<Elf64_Rela> pltrelas() const { return pltrelas_; }
+    const char* strtab() const { return strtab_; }
 
    private:
     const std::filesystem::path path_;
@@ -65,6 +66,7 @@ class DynLoader {
     std::filesystem::path main_path_;
     std::vector<ELFBinary> binaries_;
     void Relocate();
+    std::pair<size_t, size_t> SearchSym(const std::string& name);
 };
 
 std::unique_ptr<DynLoader> MakeDynLoader(

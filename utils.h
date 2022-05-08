@@ -91,3 +91,5 @@ std::vector<std::string> SplitWith(std::string str,
 std::string ShowRela(const Elf64_Rela& r);
 
 std::string ShowSym(const Elf64_Sym& s, const char* strtab);
+
+std::string ShowRelocationType(int type);

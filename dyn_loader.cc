@@ -288,14 +288,67 @@ std::filesystem::path DynLoader::FindLibrary(
     std::abort();
 }
 
+// Search the first defined symbol
+// Return pair of the index of ELFBinary and the index of the Elf64_Sym
+// TODO: Consider version information
+// TODO: Return ELFBinary and Elf64_Sym theirselves
+std::pair<size_t, size_t> DynLoader::SearchSym(const std::string& name) {
+    LOG(INFO) << "========== SearchSym " << name << "==========";
+    for (size_t i = 0; i < binaries_.size(); i++) {
+        for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
+            Elf64_Sym s = binaries_[i].symtabs()[j];
+            std::string n = s.st_name + binaries_[i].strtab();
+            if (n == name && s.st_shndx != SHN_UNDEF) {
+                LOG(INFO) << "Found " << name << " at index " << j << " of "
+                          << binaries_[i].path();
+                return std::make_pair(i, j);
+            }
+        }
+    }
+    LOG(FATAL) << "Cannot find " << name;
+    return std::make_pair(255, 255);
+}
+
 void DynLoader::Relocate() {
     for (const auto& bin : binaries_) {
         LOG(INFO) << bin.path();
 
-        for (const auto& r : bin.relas()) {
+        std::vector<Elf64_Rela> relas = bin.pltrelas();
+        // TODO: Use std::copy?
+        for (const auto r : bin.relas()) {
+            relas.emplace_back(r);
+        }
+
+        for (const auto& r : relas) {
             LOG(INFO) << ShowRela(r);
             CHECK_LT(ELF64_R_SYM(r.r_info), bin.symtabs().size());
             Elf64_Sym s = bin.symtabs()[ELF64_R_SYM(r.r_info)];
+            std::string name = s.st_name + bin.strtab();
+            LOG(INFO) << LOG_KEY(name);
+
+            switch (ELF64_R_TYPE(r.r_info)) {
+                case R_X86_64_JUMP_SLOT: {
+                    LOG(INFO) << ShowRelocationType(ELF64_R_TYPE(r.r_info));
+                    auto p = SearchSym(name);
+                    break;
+                }
+                case R_X86_64_RELATIVE: {
+                    LOG(WARNING) << "Skip for now "
+                                 << ShowRelocationType(ELF64_R_TYPE(r.r_info));
+                    break;
+                }
+                case R_X86_64_GLOB_DAT: {
+                    LOG(WARNING) << "Skip for now "
+                                 << ShowRelocationType(ELF64_R_TYPE(r.r_info));
+                    break;
+                }
+                default: {
+                    LOG(FATAL) << "Unsupported! "
+                               << ShowRelocationType(ELF64_R_TYPE(r.r_info));
+                    std::abort();
+                    break;
+                }
+            }
         }
     }
 }

@@ -235,6 +235,7 @@ DynLoader::DynLoader(const std::filesystem::path& main_path)
                                    binaries_.back().rpath()));
     }
 
+    // Search depending sos.
     while (!queue.empty()) {
         const auto [library_name, runpath, rpath] = queue.front();
         queue.pop();
@@ -256,6 +257,8 @@ DynLoader::DynLoader(const std::filesystem::path& main_path)
                                        binaries_.back().rpath()));
         }
     }
+
+    Relocate();
 }
 
 std::filesystem::path DynLoader::FindLibrary(
@@ -283,6 +286,18 @@ std::filesystem::path DynLoader::FindLibrary(
     }
     LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
     std::abort();
+}
+
+void DynLoader::Relocate() {
+    for (const auto& bin : binaries_) {
+        LOG(INFO) << bin.path();
+
+        for (const auto& r : bin.relas()) {
+            LOG(INFO) << ShowRela(r);
+            CHECK_LT(ELF64_R_SYM(r.r_info), bin.symtabs().size());
+            Elf64_Sym s = bin.symtabs()[ELF64_R_SYM(r.r_info)];
+        }
+    }
 }
 
 std::unique_ptr<DynLoader> MakeDynLoader(

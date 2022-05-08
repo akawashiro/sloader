@@ -18,9 +18,13 @@ class ELFBinary {
     void Load(Elf64_Addr base_addr);
     void ParseDynamic();
     std::vector<std::string> neededs() { return neededs_; }
+    const std::vector<Elf64_Sym> symtabs() const { return symtabs_; }
     std::optional<std::filesystem::path> runpath() { return runpath_; }
     std::optional<std::filesystem::path> rpath() { return rpath_; }
     Elf64_Addr end_addr() { return end_addr_; }
+    const std::filesystem::path path() const { return path_; }
+    const std::vector<Elf64_Rela> relas() const { return relas_; }
+    const std::vector<Elf64_Rela> pltrelas() const { return pltrelas_; }
 
    private:
     const std::filesystem::path path_;
@@ -60,6 +64,7 @@ class DynLoader {
         std::optional<std::filesystem::path> rpath);
     std::filesystem::path main_path_;
     std::vector<ELFBinary> binaries_;
+    void Relocate();
 };
 
 std::unique_ptr<DynLoader> MakeDynLoader(

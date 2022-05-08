@@ -153,12 +153,12 @@ std::string ShowRelocationType(int type) {
 
 std::string ShowRela(const Elf64_Rela& r) {
     std::stringstream ss;
-    ss << "Elf_Rela{r_offset=" << LOG_32BITS(r.r_offset)
-       << ", r_info=" << LOG_32BITS(r.r_info)
-       << ", ELF_R64_SYM(r.r_info)=" << LOG_16BITS(ELF64_R_SYM(r.r_info))
-       << ", ELF_R64_TYPE(r.r_info)="
+    ss << "Elf_Rela{r_offset=" << HexString(r.r_offset, 8)
+       << ", r_info=" << HexString(r.r_info, 8)
+       << ", ELF64_R_SYM(r.r_info)=" << HexString(ELF64_R_SYM(r.r_info), 4)
+       << ", ELF64_R_TYPE(r.r_info)="
        << ShowRelocationType(ELF64_R_TYPE(r.r_info))
-       << ", r_addend=" << LOG_32BITS(r.r_addend) << "}";
+       << ", r_addend=" << HexString(r.r_addend, 8) << "}";
     return ss.str();
 }
 

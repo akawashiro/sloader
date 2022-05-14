@@ -17,11 +17,13 @@ class ELFBinary {
     ELFBinary(const std::filesystem::path path);
     void Load(Elf64_Addr base_addr);
     void ParseDynamic();
+    const Elf64_Addr GetSymbolAddr(const size_t symbol_index);
     std::vector<std::string> neededs() { return neededs_; }
     const std::vector<Elf64_Sym> symtabs() const { return symtabs_; }
     std::optional<std::filesystem::path> runpath() { return runpath_; }
     std::optional<std::filesystem::path> rpath() { return rpath_; }
-    Elf64_Addr end_addr() { return end_addr_; }
+    const Elf64_Addr base_addr() const { return base_addr_; }
+    const Elf64_Addr end_addr() const { return end_addr_; }
     const std::filesystem::path path() const { return path_; }
     const std::vector<Elf64_Rela> relas() const { return relas_; }
     const std::vector<Elf64_Rela> pltrelas() const { return pltrelas_; }

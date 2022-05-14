@@ -33,6 +33,7 @@ extern std::ofstream null_stream;
 #define LOG_BITS(key) LOG_KEY_VALUE(#key, HexString(key))
 #define LOG_16BITS(key) LOG_KEY_VALUE(#key, HexString(key, 4))
 #define LOG_32BITS(key) LOG_KEY_VALUE(#key, HexString(key, 8))
+#define LOG_64BITS(key) LOG_KEY_VALUE(#key, HexString(key, 16))
 
 #define CHECK(cond)                       \
     if (!(cond)) {                        \

@@ -217,6 +217,11 @@ void ELFBinary::ParseDynamic() {
     }
 }
 
+const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
+    CHECK_LT(symbol_index, symtabs().size());
+    return symtabs()[symbol_index].st_value + base_addr();
+}
+
 DynLoader::DynLoader(const std::filesystem::path& main_path)
     : main_path_(main_path) {
     Elf64_Addr base_addr = 0x400000;
@@ -329,12 +334,21 @@ void DynLoader::Relocate() {
             switch (ELF64_R_TYPE(r.r_info)) {
                 case R_X86_64_JUMP_SLOT: {
                     LOG(INFO) << ShowRelocationType(ELF64_R_TYPE(r.r_info));
-                    auto p = SearchSym(name);
+                    const auto [bin_index, sym_index] = SearchSym(name);
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
+                        bin.base_addr() + r.r_offset);
+                    const Elf64_Addr sym_addr =
+                        binaries_[bin_index].GetSymbolAddr(sym_index);
+                    LOG(INFO) << LOG_KEY(reloc_addr) << LOG_BITS(*reloc_addr)
+                              << LOG_BITS(sym_addr);
+                    *reloc_addr += sym_addr;
                     break;
                 }
                 case R_X86_64_RELATIVE: {
-                    LOG(WARNING) << "Skip for now "
-                                 << ShowRelocationType(ELF64_R_TYPE(r.r_info));
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
+                        bin.base_addr() + r.r_offset);
+                    *reloc_addr =
+                        reinterpret_cast<Elf64_Addr>(reloc_addr + r.r_addend);
                     break;
                 }
                 case R_X86_64_GLOB_DAT: {

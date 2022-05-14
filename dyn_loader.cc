@@ -375,7 +375,8 @@ void DynLoader::Execute(std::vector<std::string> envs) {
 
     CHECK_EQ(stack_index, stack_num);
 
-    ExecuteCore(stack, stack_num, binaries_[0].ehdr().e_entry);
+    ExecuteCore(stack, stack_num,
+                binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
 
     free(stack);
     LOG(INFO) << "Execute end";

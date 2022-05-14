@@ -17,6 +17,7 @@ class ELFBinary {
     ELFBinary(const std::filesystem::path path);
     void Load(Elf64_Addr base_addr);
     void ParseDynamic();
+    const std::string filename() { return path_.filename().string(); }
     const Elf64_Addr GetSymbolAddr(const size_t symbol_index);
     std::vector<std::string> neededs() { return neededs_; }
     const std::vector<Elf64_Sym> symtabs() const { return symtabs_; }
@@ -28,6 +29,7 @@ class ELFBinary {
     const std::vector<Elf64_Rela> relas() const { return relas_; }
     const std::vector<Elf64_Rela> pltrelas() const { return pltrelas_; }
     const char* strtab() const { return strtab_; }
+    const Elf64_Ehdr ehdr() const { return ehdr_; }
 
    private:
     const std::filesystem::path path_;
@@ -59,17 +61,22 @@ class ELFBinary {
 
 class DynLoader {
    public:
-    DynLoader(const std::filesystem::path& main_path);
+    DynLoader(const std::filesystem::path& main_path,
+              const std::vector<std::string>& envs);
+    void Execute(std::vector<std::string> envs);
 
    private:
+    void __attribute__((noinline))
+    ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry);
     std::filesystem::path FindLibrary(
         std::string library_name, std::optional<std::filesystem::path> runpath,
         std::optional<std::filesystem::path> rpath);
     std::filesystem::path main_path_;
+    const std::vector<std::string> envs_;
     std::vector<ELFBinary> binaries_;
     void Relocate();
     std::pair<size_t, size_t> SearchSym(const std::string& name);
 };
 
-std::unique_ptr<DynLoader> MakeDynLoader(
-    const std::filesystem::path& main_path);
+std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path,
+                                         const std::vector<std::string>& envs);

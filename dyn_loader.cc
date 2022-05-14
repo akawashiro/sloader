@@ -375,6 +375,8 @@ void DynLoader::Execute(std::vector<std::string> envs) {
 
     CHECK_EQ(stack_index, stack_num);
 
+    LOG(INFO) << LOG_BITS(binaries_[0].ehdr().e_entry +
+                          binaries_[0].base_addr());
     ExecuteCore(stack, stack_num,
                 binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
 
@@ -457,7 +459,11 @@ void DynLoader::Relocate() {
                         binaries_[bin_index].GetSymbolAddr(sym_index);
                     LOG(INFO) << LOG_KEY(reloc_addr) << LOG_BITS(*reloc_addr)
                               << LOG_BITS(sym_addr);
-                    *reloc_addr += sym_addr;
+                    // TODO: Although glibc add sym_addr to the original value
+                    // here
+                    // https://github.com/akawashiro/glibc/blob/008003dc6e83439c5e04a744b7fd8197df19096e/sysdeps/x86_64/dl-machine.h#L561,
+                    // We just assign it.
+                    *reloc_addr = sym_addr;
                     break;
                 }
                 case R_X86_64_RELATIVE: {

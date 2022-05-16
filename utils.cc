@@ -162,9 +162,68 @@ std::string ShowRela(const Elf64_Rela& r) {
     return ss.str();
 }
 
+std::string ShowSTB(unsigned char bind) {
+    switch (bind) {
+        case STB_LOCAL:
+            return "STB_LOCAL";
+        case STB_GLOBAL:
+            return "STB_GLOBAL";
+        case STB_WEAK:
+            return "STB_WEAK";
+        case STB_NUM:
+            return "STB_NUM";
+        case STB_GNU_UNIQUE:
+            return "STB_GNU_UNIQUE";
+        case STB_HIOS:
+            return "STB_HIOS";
+        case STB_LOPROC:
+            return "STB_LOPROC";
+        case STB_HIPROC:
+            return "STB_HIPROC";
+        default: {
+            LOG(FATAL) << LOG_KEY(bind);
+            std::abort();
+        }
+    }
+}
+
+std::string ShowSTT(unsigned char type) {
+    switch (type) {
+        case STT_NOTYPE:
+            return "STT_NOTYPE";
+        case STT_OBJECT:
+            return "STT_OBJECT";
+        case STT_FUNC:
+            return "STT_FUNC";
+        case STT_SECTION:
+            return "STT_SECTION";
+        case STT_FILE:
+            return "STT_FILE";
+        case STT_COMMON:
+            return "STT_COMMON";
+        case STT_TLS:
+            return "STT_TLS";
+        case STT_NUM:
+            return "STT_NUM";
+        case STT_GNU_IFUNC:
+            return "STT_GNU_IFUNC";
+        default: {
+            LOG(FATAL) << LOG_KEY(type);
+            std::abort();
+        }
+    }
+}
+
 std::string ShowSym(const Elf64_Sym& s, const char* strtab) {
     std::stringstream ss;
     std::string name = strtab + s.st_name;
-    ss << "Elf64_Sym{st_name=" << name << "}";
+    unsigned char bind = ELF64_ST_BIND(s.st_info);
+    unsigned char type = ELF64_ST_TYPE(s.st_info);
+    ss << "Elf64_Sym{st_name=" << name
+       << ", ELF64_ST_BIND(st_info)=" << ShowSTB(bind)
+       << ", ELF64_ST_TYPE(st_info)=" << ShowSTT(type)
+       << ", st_other=" << s.st_other << ", st_shndx=" << s.st_shndx
+       << ", st_value=" << HexString(s.st_value)
+       << ", st_size=" << HexString(s.st_size) << "}";
     return ss.str();
 }

@@ -78,7 +78,7 @@ std::string HexString(const char* num, int length);
 template <class T>
 std::string HexString(T num, int length = -1) {
     if (length == -1) {
-        length = sizeof(T) * 2;
+        length = sizeof(T) / 2;
     }
     std::stringstream ss;
     ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length)

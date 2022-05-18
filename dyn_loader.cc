@@ -416,7 +416,8 @@ std::filesystem::path DynLoader::FindLibrary(
 // Return pair of the index of ELFBinary and the index of the Elf64_Sym
 // TODO: Consider version information
 // TODO: Return ELFBinary and Elf64_Sym theirselves
-std::pair<size_t, size_t> DynLoader::SearchSym(const std::string& name) {
+std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(
+    const std::string& name) {
     LOG(INFO) << "========== SearchSym " << name << "==========";
     for (size_t i = 0; i < binaries_.size(); i++) {
         for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
@@ -425,12 +426,11 @@ std::pair<size_t, size_t> DynLoader::SearchSym(const std::string& name) {
             if (n == name && s.st_shndx != SHN_UNDEF) {
                 LOG(INFO) << "Found " << name << " at index " << j << " of "
                           << binaries_[i].path();
-                return std::make_pair(i, j);
+                return std::make_optional(std::make_pair(i, j));
             }
         }
     }
-    LOG(FATAL) << "Cannot find " << name;
-    return std::make_pair(255, 255);
+    return std::nullopt;
 }
 
 void DynLoader::Relocate() {
@@ -451,13 +451,19 @@ void DynLoader::Relocate() {
             LOG(INFO) << LOG_KEY(name);
 
             switch (ELF64_R_TYPE(r.r_info)) {
+                case R_X86_64_GLOB_DAT:
                 case R_X86_64_JUMP_SLOT: {
                     LOG(INFO) << ShowRelocationType(ELF64_R_TYPE(r.r_info));
-                    const auto [bin_index, sym_index] = SearchSym(name);
-                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
-                        bin.base_addr() + r.r_offset);
+                    const auto opt = SearchSym(name);
+                    if (!opt) {
+                        LOG(WARNING) << "Cannot find " << name;
+                        break;
+                    }
+                    const auto [bin_index, sym_index] = opt.value();
                     const Elf64_Addr sym_addr =
                         binaries_[bin_index].GetSymbolAddr(sym_index);
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
+                        bin.base_addr() + r.r_offset);
                     LOG(INFO) << LOG_KEY(reloc_addr) << LOG_BITS(*reloc_addr)
                               << LOG_BITS(sym_addr);
                     // TODO: Although glibc add sym_addr to the original value
@@ -467,6 +473,8 @@ void DynLoader::Relocate() {
                     *reloc_addr = sym_addr;
                     break;
                 }
+                    // TODO: Is is correct?
+                case R_X86_64_IRELATIVE:
                 case R_X86_64_RELATIVE: {
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
                         bin.base_addr() + r.r_offset);
@@ -474,9 +482,21 @@ void DynLoader::Relocate() {
                         reinterpret_cast<Elf64_Addr>(reloc_addr + r.r_addend);
                     break;
                 }
-                case R_X86_64_GLOB_DAT: {
-                    LOG(WARNING) << "Skip for now "
-                                 << ShowRelocationType(ELF64_R_TYPE(r.r_info));
+                case R_X86_64_64: {
+                    const auto opt = SearchSym(name);
+                    if (!opt) {
+                        LOG(FATAL) << "Cannot find " << name;
+                        std::abort();
+                        break;
+                    }
+                    const auto [bin_index, sym_index] = opt.value();
+                    Elf64_Sym sym = binaries_[bin_index].symtabs()[sym_index];
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
+                        bin.base_addr() + r.r_offset);
+                    *reloc_addr = sym.st_value + r.r_addend;
+                    break;
+                }
+                case R_X86_64_TPOFF64: {
                     break;
                 }
                 default: {

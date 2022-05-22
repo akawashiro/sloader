@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cstring>
+
 namespace {
 void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res,
                        const std::string& filename) {
@@ -419,7 +421,9 @@ std::filesystem::path DynLoader::FindLibrary(
 std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(
     const std::string& name) {
     LOG(INFO) << "========== SearchSym " << name << "==========";
-    for (size_t i = 0; i < binaries_.size(); i++) {
+    // binaries_[0] is the executable itself. We should skip it.
+    // TODO: Add reference here.
+    for (size_t i = 1; i < binaries_.size(); i++) {
         for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
             Elf64_Sym s = binaries_[i].symtabs()[j];
             std::string n = s.st_name + binaries_[i].strtab();
@@ -499,9 +503,27 @@ void DynLoader::Relocate() {
                 case R_X86_64_TPOFF64: {
                     break;
                 }
+                case R_X86_64_COPY: {
+                    const auto opt = SearchSym(name);
+                    if (!opt) {
+                        LOG(FATAL) << "Cannot find " << name;
+                        std::abort();
+                        break;
+                    }
+                    const auto [bin_index, sym_index] = opt.value();
+                    Elf64_Sym sym = binaries_[bin_index].symtabs()[sym_index];
+                    const void* src = reinterpret_cast<const void*>(
+                        binaries_[bin_index].base_addr() + sym.st_value);
+                    void* dest =
+                        reinterpret_cast<void*>(bin.base_addr() + r.r_offset);
+                    LOG(INFO)
+                        << LOG_BITS(src) << LOG_BITS(dest)
+                        << LOG_KEY(*reinterpret_cast<const u_int32_t*>(src));
+                    std::memcpy(dest, src, sym.st_size);
+                    break;
+                }
                 default: {
-                    LOG(FATAL) << "Unsupported! "
-                               << ShowRelocationType(ELF64_R_TYPE(r.r_info));
+                    LOG(FATAL) << "Unsupported! " << ShowRela(r) << std::endl;
                     std::abort();
                     break;
                 }

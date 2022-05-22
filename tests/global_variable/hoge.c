@@ -1,6 +1,11 @@
 #include "raw_write.h"
 
 int hoge_var = 0;
+
+// Ooops!
+// We must define buf here as a global variable not as a local variable in
+// print_hoge_var. Otherwise, the shared object depends on libc.so. I don't know
+// the reason.
 char buf[4];
 
 int hoge(int a, int b) {

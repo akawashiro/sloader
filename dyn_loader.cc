@@ -518,8 +518,10 @@ void DynLoader::Relocate() {
                         reinterpret_cast<void*>(bin.base_addr() + r.r_offset);
                     LOG(INFO)
                         << LOG_BITS(src) << LOG_BITS(dest)
-                        << LOG_KEY(*reinterpret_cast<const u_int32_t*>(src));
+                        << LOG_BITS(
+                               *reinterpret_cast<const unsigned long*>(src));
                     std::memcpy(dest, src, sym.st_size);
+                    // std::abort();
                     break;
                 }
                 default: {

@@ -4,9 +4,10 @@ int hoge(int a, int b);
 void print_hoge_var();
 
 int main() {
-    hoge_var = 123;
+    print_hoge_var();  // Should be 0xdeadbeef
+    hoge_var = 0xabcdef12;
     print_hoge_var();
-    hoge_var = 456;
+    hoge_var = 0xaabbccdd;
     print_hoge_var();
     return hoge(2, 40);
 }

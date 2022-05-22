@@ -8,9 +8,18 @@ unsigned long hoge_var = 0xdeadbeef;
 // the reason.
 char buf[9];
 
-int hoge(int a, int b) {
-    RAW_PRINT_STR("Hello World!\n");
-    return a + b;
+void print_hex(unsigned long var) {
+    // Simple itoa
+    for (int i = 0; i < 8; i++) {
+        char c = (var >> (4 * (7 - i))) & (0xf);
+        c += (c < 10) ? '0' : 'a' - 10;
+        buf[i] = c;
+    }
+    buf[8] = 0;
+
+    RAW_PRINT_STR("print_hex: ");
+    RAW_PRINT_STR(buf);
+    RAW_PRINT_STR("\n");
 }
 
 void print_hoge_var() {
@@ -22,7 +31,8 @@ void print_hoge_var() {
     }
     buf[8] = 0;
 
-    RAW_PRINT_STR("hoge_var = ");
-    RAW_PRINT_STR(buf);
-    RAW_PRINT_STR("\n");
+    RAW_PRINT_STR("====== print_hoge_var start ======\n");
+    print_hex(hoge_var);
+    print_hex(&hoge_var);
+    RAW_PRINT_STR("====== print_hoge_var end ======\n");
 }

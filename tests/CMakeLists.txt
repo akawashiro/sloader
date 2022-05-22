@@ -33,3 +33,5 @@ add_subdirectory(cascades)
 add_subdirectory(find_a_depending_so)
 
 add_subdirectory(hello_ET_DYN)
+
+add_subdirectory(global_variable)

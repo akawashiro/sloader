@@ -419,11 +419,11 @@ std::filesystem::path DynLoader::FindLibrary(
 // TODO: Consider version information
 // TODO: Return ELFBinary and Elf64_Sym theirselves
 std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(
-    const std::string& name) {
+    const std::string& name, bool skip_main = false) {
     LOG(INFO) << "========== SearchSym " << name << "==========";
     // binaries_[0] is the executable itself. We should skip it.
     // TODO: Add reference here.
-    for (size_t i = 1; i < binaries_.size(); i++) {
+    for (size_t i = skip_main ? 1 : 0; i < binaries_.size(); i++) {
         for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
             Elf64_Sym s = binaries_[i].symtabs()[j];
             std::string n = s.st_name + binaries_[i].strtab();
@@ -504,7 +504,7 @@ void DynLoader::Relocate() {
                     break;
                 }
                 case R_X86_64_COPY: {
-                    const auto opt = SearchSym(name);
+                    const auto opt = SearchSym(name, true);
                     if (!opt) {
                         LOG(FATAL) << "Cannot find " << name;
                         std::abort();

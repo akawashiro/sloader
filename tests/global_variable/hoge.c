@@ -33,6 +33,6 @@ void print_hoge_var() {
 
     RAW_PRINT_STR("====== print_hoge_var start ======\n");
     print_hex(hoge_var);
-    print_hex(&hoge_var);
+    print_hex((unsigned long)(&hoge_var));
     RAW_PRINT_STR("====== print_hoge_var end ======\n");
 }

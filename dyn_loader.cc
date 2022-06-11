@@ -32,7 +32,7 @@ void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res,
 
             glob_t globbuf;
             glob(descendants.c_str(), 0, NULL, &globbuf);
-            for (int i = 0; i < globbuf.gl_pathc; i++) {
+            for (size_t i = 0; i < globbuf.gl_pathc; i++) {
                 read_ldsoconf_dfs(res, globbuf.gl_pathv[i]);
             }
             globfree(&globbuf);
@@ -185,7 +185,7 @@ void ELFBinary::ParseDynamic() {
     if (rela_ != nullptr) {
         CHECK_EQ(relasz_ % relaent_, 0);
         Elf64_Rela* r = rela_;
-        for (int i = 0; i < relasz_ / relaent_; i++, r++) {
+        for (size_t i = 0; i < relasz_ / relaent_; i++, r++) {
             relas_.emplace_back(*r);
             LOG(INFO) << ShowRela(relas_.back());
         }
@@ -196,7 +196,7 @@ void ELFBinary::ParseDynamic() {
         CHECK_EQ(pltrelsz_ % pltrelent_, 0);
         CHECK_EQ(pltrel_, DT_RELA);
         Elf64_Rela* r = jmprel_;
-        for (int i = 0; i < pltrelsz_ / pltrelent_; i++, r++) {
+        for (size_t i = 0; i < pltrelsz_ / pltrelent_; i++, r++) {
             pltrelas_.emplace_back(*r);
             LOG(INFO) << ShowRela(pltrelas_.back());
         }
@@ -278,7 +278,7 @@ DynLoader::DynLoader(const std::filesystem::path& main_path,
 // course, compiler must not inline this function.
 void __attribute__((noinline))
 DynLoader::ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry) {
-    for (int i = 0; i < stack_num; i++) {
+    for (size_t i = 0; i < stack_num; i++) {
         asm volatile("pushq %0" ::"m"(*(stack + i)));
     }
 
@@ -314,7 +314,7 @@ void DynLoader::Execute(std::vector<std::string> envs) {
         AT_L3_CACHEGEOMETRY, AT_MINSIGSTKSZ};
 
     std::vector<std::pair<unsigned long, unsigned long>> aux_tvs;
-    for (int i = 0; i < aux_types.size(); i++) {
+    for (size_t i = 0; i < aux_types.size(); i++) {
         unsigned long v = getauxval(aux_types[i]);
         if (v != 0) {
             aux_tvs.emplace_back(std::make_pair(aux_types[i], v));
@@ -347,7 +347,7 @@ void DynLoader::Execute(std::vector<std::string> envs) {
     stack_index += 2;
 
     // auxs
-    for (int i = 0; i < aux_tvs.size(); i++) {
+    for (size_t i = 0; i < aux_tvs.size(); i++) {
         *(stack + stack_index) = aux_tvs[i].second;
         stack_index++;
         *(stack + stack_index) = aux_tvs[i].first;
@@ -358,7 +358,7 @@ void DynLoader::Execute(std::vector<std::string> envs) {
     stack_index++;
 
     // Environment variables
-    for (int i = 0; i < envs.size(); i++) {
+    for (size_t i = 0; i < envs.size(); i++) {
         *(stack + stack_index) = reinterpret_cast<uint64_t>(envs[i].c_str());
         stack_index++;
     }

@@ -5,7 +5,7 @@
 class ExecLoader {
    public:
     ExecLoader(const std::string& filename, char* head, const size_t size)
-        : filename_(filename), head_(head), size_(size) {
+        : head_(head), size_(size), filename_(filename) {
         ehdr_ = reinterpret_cast<Elf64_Ehdr*>(head);
         for (uint16_t i = 0; i < ehdr()->e_phnum; i++) {
             phdrs_.emplace_back(reinterpret_cast<Elf64_Phdr*>(
@@ -75,7 +75,7 @@ class ExecLoader {
     // course, compiler must not inline this function.
     void __attribute__((noinline))
     ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry) {
-        for (int i = 0; i < stack_num; i++) {
+        for (size_t i = 0; i < stack_num; i++) {
             asm volatile("pushq %0" ::"m"(*(stack + i)));
         }
 
@@ -111,7 +111,7 @@ class ExecLoader {
             AT_L3_CACHEGEOMETRY, AT_MINSIGSTKSZ};
 
         std::vector<std::pair<unsigned long, unsigned long>> aux_tvs;
-        for (int i = 0; i < aux_types.size(); i++) {
+        for (size_t i = 0; i < aux_types.size(); i++) {
             unsigned long v = getauxval(aux_types[i]);
             if (v != 0) {
                 aux_tvs.emplace_back(std::make_pair(aux_types[i], v));
@@ -144,7 +144,7 @@ class ExecLoader {
         stack_index += 2;
 
         // auxs
-        for (int i = 0; i < aux_tvs.size(); i++) {
+        for (size_t i = 0; i < aux_tvs.size(); i++) {
             *(stack + stack_index) = aux_tvs[i].second;
             stack_index++;
             *(stack + stack_index) = aux_tvs[i].first;
@@ -155,7 +155,7 @@ class ExecLoader {
         stack_index++;
 
         // Environment variables
-        for (int i = 0; i < envs.size(); i++) {
+        for (size_t i = 0; i < envs.size(); i++) {
             *(stack + stack_index) =
                 reinterpret_cast<uint64_t>(envs[i].c_str());
             stack_index++;
@@ -185,12 +185,12 @@ class ExecLoader {
     std::vector<Elf64_Phdr*> phdrs() { return phdrs_; }
 
    private:
-    char* head_;
+    char* head_ = nullptr;
     size_t size_;
-    std::string filename_;
-    Elf64_Ehdr* ehdr_;
+    std::string filename_ = "";
+    Elf64_Ehdr* ehdr_ = nullptr;
     std::vector<Elf64_Phdr*> phdrs_;
-    Elf64_Phdr* ph_dynamic_ = NULL;
+    Elf64_Phdr* ph_dynamic_ = nullptr;
     std::vector<Elf64_Dyn*> dyns_;
     std::vector<std::pair<char*, uint32_t>> memories_;
 };

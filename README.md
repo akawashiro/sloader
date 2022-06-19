@@ -9,3 +9,10 @@ cmake .. -G Ninja
 ninja
 ctest -V
 ```
+
+## Test using custom build glibc
+```
+./clone_glibc.sh
+./build_glibc.sh
+SLOADER_LIBRARY_PATH=/home/akira/sloader/glibc-install/lib ./build/sloader ./build/tests/hello_glibc/hello_glibc
+```

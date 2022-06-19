@@ -100,14 +100,18 @@ void ELFBinary::Load(Elf64_Addr base_addr) {
                  MAP_SHARED | MAP_ANONYMOUS, -1, 0));
         LOG(INFO) << "mmap: " << LOG_KEY(path_) << LOG_BITS(p)
                   << LOG_BITS(ph.p_vaddr);
-        CHECK_EQ(mmap_start, p);
+        CHECK_EQ(mmap_start, +p);
         CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start),
                  ph.p_vaddr + base_addr);
         CHECK_LE(ph.p_vaddr + base_addr + ph.p_memsz,
                  reinterpret_cast<Elf64_Addr>(mmap_end));
         LOG(INFO) << LOG_BITS(mmap_start)
-                  << LOG_BITS(file_base_addr_ + ph.p_offset)
+                  << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ +
+                                                       ph.p_offset))
                   << LOG_BITS(ph.p_filesz);
+        LOG(INFO) << "map " << path() << ": " << HexString(ph.p_offset)
+                  << " -- " << HexString(ph.p_offset + ph.p_filesz) << " to "
+                  << HexString(mmap_start) << " -- " << HexString(mmap_end);
         memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr),
                file_base_addr_ + ph.p_offset, ph.p_filesz);
     }
@@ -495,8 +499,7 @@ void DynLoader::Relocate() {
                 case R_X86_64_64: {
                     const auto opt = SearchSym(name);
                     if (!opt) {
-                        LOG(FATAL) << "Cannot find " << name;
-                        std::abort();
+                        LOG(WARNING) << "Cannot find " << name;
                         break;
                     }
                     const auto [bin_index, sym_index] = opt.value();

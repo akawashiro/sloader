@@ -18,25 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include <sys/syscall.h>
+// #include <sys/syscall.h>
+
+// TODO(akawashiro):
+#define SYS_write 1
+#define SYS_exit 60
 
 #if defined(__x86_64__)
-#define RAW_WRITE(fd, buf, count)                                                     \
-    do {                                                                              \
-        register unsigned long RAW_rsi##__LINE__ __asm__("rsi") = (unsigned long)buf; \
-        __asm__ volatile("syscall;\n"                                                 \
-                         : "+r"(RAW_rsi##__LINE__)                                    \
-                         : "a"(SYS_write), "D"(fd), "d"(count)                        \
-                         : "r8", "r10", "rcx", "r11", "memory", "cc");                \
-        /* The input registers may be broken by syscall */                            \
-        __asm__ volatile("" ::: "rax", "rdi", "rdx");                                 \
+#define RAW_EXIT(status)                                                  \
+    do {                                                                  \
+        __asm__ volatile("syscall;\n" : : "a"(SYS_exit), "D"(status) :); \
+    } while (0)
+
+#define RAW_WRITE(fd, buf, count)                                      \
+    do {                                                               \
+        register unsigned long RAW_rsi##__LINE__ __asm__("rsi") =      \
+            (unsigned long)buf;                                        \
+        __asm__ volatile("syscall;\n"                                  \
+                         : "+r"(RAW_rsi##__LINE__)                     \
+                         : "a"(SYS_write), "D"(fd), "d"(count)         \
+                         : "r8", "r10", "rcx", "r11", "memory", "cc"); \
+        /* The input registers may be broken by syscall */             \
+        __asm__ volatile("" ::: "rax", "rdi", "rdx");                  \
     } while (0)
 #elif defined(__i386__)
-#define RAW_WRITE(fd, buf, count)                                                                          \
-    do {                                                                                                   \
-        __asm__ volatile("int $0x80;\n" ::"a"(SYS_write), "b"(fd), "c"(buf), "d"(count) : "memory", "cc"); \
-        /* The input registers may be broken by syscall */                                                 \
-        __asm__ volatile("" ::: "eax", "ebx", "ecx", "edx");                                               \
+#define RAW_WRITE(fd, buf, count)                                            \
+    do {                                                                     \
+        __asm__ volatile("int $0x80;\n" ::"a"(SYS_write), "b"(fd), "c"(buf), \
+                         "d"(count)                                          \
+                         : "memory", "cc");                                  \
+        /* The input registers may be broken by syscall */                   \
+        __asm__ volatile("" ::: "eax", "ebx", "ecx", "edx");                 \
     } while (0)
 #elif defined(__arm__)
 #define RAW_WRITE(fd, buf, count)                \
@@ -62,7 +74,7 @@
         int i;                                 \
         for (i = 0; RAW_p##__LINE__[i]; i++) { \
         }                                      \
-        RAW_WRITE(2, RAW_p##__LINE__, i);      \
+        RAW_WRITE(1, RAW_p##__LINE__, i);      \
     } while (0)
 
 #define RAW_PRINT_BASE_N(num, base)                    \
@@ -94,7 +106,7 @@
         } else {                                       \
             p++;                                       \
         }                                              \
-        RAW_WRITE(2, p, l);                            \
+        RAW_WRITE(1, p, l);                            \
     } while (0)
 
 #define RAW_PRINT_HEX(num) RAW_PRINT_BASE_N(num, 16)
@@ -102,7 +114,7 @@
 #define RAW_PRINT_PTR(num)                        \
     do {                                          \
         char buf[3] = "0x";                       \
-        RAW_WRITE(2, buf, 2);                     \
+        RAW_WRITE(1, buf, 2);                     \
         RAW_PRINT_BASE_N((unsigned long)num, 16); \
     } while (0)
 
@@ -110,7 +122,7 @@
     do {                                    \
         print;                              \
         char buf[2] = "\n";                 \
-        RAW_WRITE(2, buf, 1);               \
+        RAW_WRITE(1, buf, 1);               \
     } while (0)
 #define RAW_PUTS_STR(buf) RAW_PRINT_NL_AFTER_SOMETHING(RAW_PRINT_STR(buf))
 #define RAW_PUTS_HEX(buf) RAW_PRINT_NL_AFTER_SOMETHING(RAW_PRINT_HEX(buf))

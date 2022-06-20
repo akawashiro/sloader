@@ -36,6 +36,8 @@ add_subdirectory(hello_glibc)
 
 add_subdirectory(global_variable)
 
+add_subdirectory(static_struct)
+
 if(CUSTOM_LIBC_PATH)
   add_custom_target(
     hello_static_custom_libc ALL

@@ -396,7 +396,10 @@ std::filesystem::path DynLoader::FindLibrary(
     std::optional<std::filesystem::path> rpath) {
     std::vector<std::filesystem::path> library_directory;
 
-    std::string sloader_library_path(std::getenv("SLOADER_LIBRARY_PATH"));
+    std::string sloader_library_path(std::getenv("SLOADER_LIBRARY_PATH") ==
+                                             nullptr
+                                         ? ""
+                                         : std::getenv("SLOADER_LIBRARY_PATH"));
     if (!sloader_library_path.empty()) {
         library_directory.emplace_back(sloader_library_path);
     }

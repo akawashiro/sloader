@@ -146,3 +146,13 @@
 #else
 #error "RAW_UNIQ_NOP isn't defined for this architecture"
 #endif
+
+#define RAW_DEBUG_MESSAGE()                      \
+    do {                                         \
+        RAW_PRINT_STR("sloader debug message "); \
+        RAW_PRINT_STR(__FILE__);                 \
+        RAW_PRINT_STR(":");                      \
+        RAW_PRINT_INT(__LINE__);                 \
+        RAW_PRINT_STR("\n");                     \
+    } while (0)
+

@@ -25,8 +25,17 @@
 #define SYS_exit 60
 
 #if defined(__x86_64__)
-#define RAW_EXIT(status)                                                  \
-    do {                                                                  \
+
+#define RAW_NOP4()                        \
+    do {                                  \
+        __asm__ volatile("nop;\n" : : :); \
+        __asm__ volatile("nop;\n" : : :); \
+        __asm__ volatile("nop;\n" : : :); \
+        __asm__ volatile("nop;\n" : : :); \
+    } while (0)
+
+#define RAW_EXIT(status)                                                 \
+    do {                                                                 \
         __asm__ volatile("syscall;\n" : : "a"(SYS_exit), "D"(status) :); \
     } while (0)
 

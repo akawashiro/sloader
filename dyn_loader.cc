@@ -81,7 +81,13 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
 void ELFBinary::Load(Elf64_Addr base_addr) {
     base_addr_ = base_addr;
     end_addr_ = base_addr_;
+
+    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr
+                               ? "/dev/null"
+                               : std::getenv("SLOADER_MAP_FILE"));
+
     LOG(INFO) << "Load start " << path_;
+
     for (auto ph : file_phdrs_) {
         if (ph.p_type != PT_LOAD) {
             continue;
@@ -109,9 +115,11 @@ void ELFBinary::Load(Elf64_Addr base_addr) {
                   << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ +
                                                        ph.p_offset))
                   << LOG_BITS(ph.p_filesz);
-        LOG(INFO) << "map " << path() << ": " << HexString(ph.p_offset)
-                  << " -- " << HexString(ph.p_offset + ph.p_filesz) << " to "
-                  << HexString(mmap_start) << " -- " << HexString(mmap_end);
+        map_file << filename() << " " << HexString(ph.p_offset, 16) << "-"
+                 << HexString(ph.p_offset + ph.p_filesz, 16) << " "
+                 << HexString(ph.p_filesz, 16) << " => "
+                 << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
+                 << std::endl;
         memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr),
                file_base_addr_ + ph.p_offset, ph.p_filesz);
     }

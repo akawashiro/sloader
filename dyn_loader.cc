@@ -78,13 +78,9 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     }
 }
 
-void ELFBinary::Load(Elf64_Addr base_addr) {
+void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
     base_addr_ = base_addr;
     end_addr_ = base_addr_;
-
-    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr
-                               ? "/dev/null"
-                               : std::getenv("SLOADER_MAP_FILE"));
 
     LOG(INFO) << "Load start " << path_;
 
@@ -95,17 +91,39 @@ void ELFBinary::Load(Elf64_Addr base_addr) {
         LOG(INFO) << LOG_BITS(reinterpret_cast<void*>(ph.p_vaddr))
                   << LOG_BITS(ph.p_memsz);
         void* mmap_start =
-            reinterpret_cast<void*>((ph.p_vaddr + base_addr) & (~(0xfff)));
+            reinterpret_cast<void*>(((ph.p_vaddr + base_addr) & (~(0xfff))));
         void* mmap_end = reinterpret_cast<void*>(
-            ((ph.p_vaddr + ph.p_memsz + base_addr) + 0xfff) & (~(0xfff)));
+            (((ph.p_vaddr + ph.p_memsz + base_addr) + 0xfff) & (~(0xfff))));
         end_addr_ = reinterpret_cast<Elf64_Addr>(mmap_end);
         size_t mmap_size = reinterpret_cast<size_t>(mmap_end) -
                            reinterpret_cast<size_t>(mmap_start);
-        char* p = reinterpret_cast<char*>(
-            mmap(mmap_start, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                 MAP_SHARED | MAP_ANONYMOUS, -1, 0));
+        int flags = 0;
+        std::string flags_str = "";
+        if (ph.p_flags & PF_R) {
+            flags |= PROT_READ;
+            flags_str += "r";
+        } else {
+            flags_str += "_";
+        }
+        if ((ph.p_flags & PF_W) ||
+            true) {  // TODO: We need to write contents after mmap.
+            flags |= PROT_WRITE;
+            flags_str += "w";
+        } else {
+            flags_str += "_";
+        }
+        if (ph.p_flags & PF_X) {
+            flags |= PROT_EXEC;
+            flags_str += "x";
+        } else {
+            flags_str += "_";
+        }
+
+        char* p = reinterpret_cast<char*>(mmap(
+            mmap_start, mmap_size, flags, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
         LOG(INFO) << "mmap: " << LOG_KEY(path_) << LOG_BITS(p)
-                  << LOG_BITS(ph.p_vaddr);
+                  << LOG_BITS(mmap_start) << LOG_BITS(ph.p_vaddr)
+                  << "errno = " << std::strerror(errno);
         CHECK_EQ(mmap_start, +p);
         CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start),
                  ph.p_vaddr + base_addr);
@@ -115,9 +133,11 @@ void ELFBinary::Load(Elf64_Addr base_addr) {
                   << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ +
                                                        ph.p_offset))
                   << LOG_BITS(ph.p_filesz);
-        map_file << filename() << " " << HexString(ph.p_offset, 16) << "-"
-                 << HexString(ph.p_offset + ph.p_filesz, 16) << " "
-                 << HexString(ph.p_filesz, 16) << " => "
+        std::string n = std::string("                 ") + path().string();
+        map_file << n.substr(n.size() - 16, 16) << " "
+                 << HexString(ph.p_offset, 16) << "-"
+                 << HexString(ph.p_offset + ph.p_filesz, 16) << " " << flags_str
+                 << " " << HexString(ph.p_filesz, 16) << " => "
                  << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
                  << std::endl;
         memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr),
@@ -240,9 +260,14 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
 DynLoader::DynLoader(const std::filesystem::path& main_path,
                      const std::vector<std::string>& envs)
     : main_path_(main_path), envs_(envs) {
-    Elf64_Addr base_addr = 0x400000;
+    // Elf64_Addr base_addr = 0x400000 + 0xaaaf000000;
+    Elf64_Addr base_addr = 0x40'0000 + 0x7cff'ff00'0000;
     binaries_.emplace_back(ELFBinary(main_path));
-    binaries_.back().Load(base_addr);
+
+    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr
+                               ? "/dev/null"
+                               : std::getenv("SLOADER_MAP_FILE"));
+    binaries_.back().Load(base_addr, map_file);
     base_addr =
         (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 
@@ -270,7 +295,7 @@ DynLoader::DynLoader(const std::filesystem::path& main_path,
 
         const auto library_path = FindLibrary(library_name, runpath, rpath);
         binaries_.emplace_back(ELFBinary(library_path));
-        binaries_.back().Load(base_addr);
+        binaries_.back().Load(base_addr, map_file);
         base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 *
                     0x400000;
         for (const auto& n : binaries_.back().neededs()) {

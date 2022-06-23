@@ -15,7 +15,7 @@
 class ELFBinary {
    public:
     ELFBinary(const std::filesystem::path path);
-    void Load(Elf64_Addr base_addr);
+    void Load(Elf64_Addr base_addr, std::ofstream& map_file);
     void ParseDynamic();
     const std::string filename() { return path_.filename().string(); }
     const Elf64_Addr GetSymbolAddr(const size_t symbol_index);

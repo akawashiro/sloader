@@ -41,26 +41,6 @@ std::vector<std::string> SplitWith(std::string str,
     return ret;
 }
 
-std::string HexString(char* num, int length = -1) {
-    if (length == -1) {
-        length = 16;
-    }
-    std::stringstream ss;
-    ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length)
-       << std::hex << (u_int64_t)num;
-    return ss.str();
-}
-
-std::string HexString(const char* num, int length = -1) {
-    if (length == -1) {
-        length = 16;
-    }
-    std::stringstream ss;
-    ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length)
-       << std::hex << (u_int64_t)num;
-    return ss.str();
-}
-
 std::string ShowRelocationType(int type) {
     switch (type) {
         case R_X86_64_NONE:

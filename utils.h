@@ -71,9 +71,22 @@ extern std::ofstream null_stream;
         std::abort();                                               \
     }
 
-std::string HexString(char* num, int length);
+template <class T>
+std::string HexString(T* num, int length = -1) {
+    uint64_t n = reinterpret_cast<uint64_t>(num);
+    if (length == -1) {
+        length = 16;
+    }
+    std::stringstream ss;
+    ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length)
+       << std::hex << n;
+    return ss.str();
+}
 
-std::string HexString(const char* num, int length);
+template <class T>
+std::string HexString(const T* num, int length = -1) {
+    return HexString(const_cast<T*>(num), length);
+}
 
 template <class T>
 std::string HexString(T num, int length = -1) {

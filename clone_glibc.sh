@@ -1,12 +1,13 @@
 #! /bin/bash -eux
 
 cd $(git rev-parse --show-toplevel)
-git clone https://github.com/akawashiro/glibc.git
-
-pushd glibc
-git fetch --all
-git checkout "2.34"
-popd
+# git clone git@github.com:akawashiro/glibc.git
+# 
+# pushd glibc
+# git remote add upstream https://sourceware.org/git/glibc.git
+# git fetch --all
+# git checkout origin/print-for-sloader
+# popd
 
 mkdir -p glibc-build
 mkdir -p glibc-install

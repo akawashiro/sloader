@@ -260,8 +260,18 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
 DynLoader::DynLoader(const std::filesystem::path& main_path,
                      const std::vector<std::string>& envs)
     : main_path_(main_path), envs_(envs) {
+    {
+        void* adr = reinterpret_cast<void*>(0xaaa1000000);
+        int size = 0x1000;
+        void* p = mmap(adr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+                       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+        LOG(INFO) << "errno = " << std::strerror(errno);
+        CHECK_EQ(adr, p);
+    }
+
     // Elf64_Addr base_addr = 0x400000 + 0xaaaf000000;
-    Elf64_Addr base_addr = 0x40'0000 + 0x7cff'ff00'0000;
+    // Elf64_Addr base_addr = 0x400000 + 0xaaaf000000;
+    Elf64_Addr base_addr = 0x40'0000;
     binaries_.emplace_back(ELFBinary(main_path));
 
     std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr

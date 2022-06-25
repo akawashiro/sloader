@@ -38,6 +38,8 @@ add_subdirectory(global_variable)
 
 add_subdirectory(static_struct)
 
+add_subdirectory(constructor)
+
 if(CUSTOM_LIBC_PATH)
   add_custom_target(
     hello_static_custom_libc ALL

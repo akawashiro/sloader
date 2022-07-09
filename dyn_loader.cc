@@ -560,7 +560,8 @@ void DynLoader::Relocate() {
                     Elf64_Sym sym = binaries_[bin_index].symtabs()[sym_index];
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
                         bin.base_addr() + r.r_offset);
-                    *reloc_addr = sym.st_value + r.r_addend;
+                    // TODO: This is wrong, maybe. What is symbol value?
+                    *reloc_addr = bin.base_addr() + sym.st_value + r.r_addend;
                     break;
                 }
                 case R_X86_64_TPOFF64: {

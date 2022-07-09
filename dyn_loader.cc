@@ -210,6 +210,14 @@ void ELFBinary::ParseDynamic() {
         } else if (dyn->d_tag == DT_SYMENT) {
             syment_ = dyn->d_un.d_val;
             CHECK_EQ(syment_, sizeof(Elf64_Sym));
+        } else if (dyn->d_tag == DT_INIT_ARRAY) {
+            init_array_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_INIT_ARRAYSZ) {
+            init_arraysz_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_FINI_ARRAY) {
+            fini_array_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_FINI_ARRAYSZ) {
+            fini_arraysz_ = dyn->d_un.d_val;
         }
     }
 

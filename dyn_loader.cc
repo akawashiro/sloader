@@ -340,7 +340,42 @@ DynLoader::ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry) {
     asm volatile("jmp *%0" ::"r"(entry));
 }
 
+// Copied from glibc
+// Type of a constructor function, in DT_INIT, DT_INIT_ARRAY, DT_PREINIT_ARRAY.
+// argc, argv, env
+typedef void (*dl_init_t)(int, const char**, const char**);
+
 void DynLoader::Execute(std::vector<std::string> envs) {
+    // TODO: Pass arguments
+    const char* argv[] = {main_path_.c_str()};
+    const char** env = reinterpret_cast<const char**>(
+        malloc(sizeof(const char*) * envs.size()));
+    for (size_t i = 0; i < envs.size(); i++) {
+        env[i] = envs[i].c_str();
+    }
+
+    for (int i = binaries_.size() - 1; 0 <= i; i--) {
+        if (binaries_[i].init_arraysz() != 0) {
+            CHECK_EQ(binaries_[i].init_arraysz() % 8, 0);  // Assume 64bits
+            LOG(INFO) << LOG_BITS(i) << LOG_BITS(binaries_[i].init_arraysz());
+            Elf64_Addr* init_array_funs =
+                reinterpret_cast<Elf64_Addr*>((reinterpret_cast<char**>(
+                    binaries_[i].init_array() + binaries_[i].base_addr())));
+
+            for (long unsigned int j = 0; j < binaries_[i].init_arraysz() / 8;
+                 j++) {
+                LOG(INFO) << LOG_KEY(binaries_[i].filename())
+                          << LOG_BITS(binaries_[i].init_array());
+                if (reinterpret_cast<dl_init_t>(init_array_funs[j]) ==
+                    nullptr) {
+                    LOG(WARNING) << LOG_BITS(init_array_funs[j]);
+                    break;
+                }
+                reinterpret_cast<dl_init_t>(init_array_funs[j])(0, argv, env);
+            }
+        }
+    }
+
     unsigned long at_random = getauxval(AT_RANDOM);
     unsigned long at_pagesz = getauxval(AT_PAGESZ);
     CHECK_NE(at_random, 0);

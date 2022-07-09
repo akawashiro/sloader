@@ -546,8 +546,8 @@ void DynLoader::Relocate() {
                 case R_X86_64_RELATIVE: {
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
                         bin.base_addr() + r.r_offset);
-                    *reloc_addr =
-                        reinterpret_cast<Elf64_Addr>(reloc_addr + r.r_addend);
+                    *reloc_addr = reinterpret_cast<Elf64_Addr>(bin.base_addr() +
+                                                               r.r_addend);
                     break;
                 }
                 case R_X86_64_64: {

@@ -210,6 +210,10 @@ void ELFBinary::ParseDynamic() {
         } else if (dyn->d_tag == DT_SYMENT) {
             syment_ = dyn->d_un.d_val;
             CHECK_EQ(syment_, sizeof(Elf64_Sym));
+        } else if (dyn->d_tag == DT_INIT) {
+            init_ = dyn->d_un.d_val;
+        } else if (dyn->d_tag == DT_FINI) {
+            fini_ = dyn->d_un.d_val;
         } else if (dyn->d_tag == DT_INIT_ARRAY) {
             init_array_ = dyn->d_un.d_val;
         } else if (dyn->d_tag == DT_INIT_ARRAYSZ) {
@@ -355,6 +359,10 @@ void DynLoader::Execute(std::vector<std::string> envs) {
     }
 
     for (int i = binaries_.size() - 1; 0 <= i; i--) {
+        if (binaries_[i].init() != 0) {
+            reinterpret_cast<dl_init_t>(binaries_[i].init() +
+                                        binaries_[i].base_addr())(1, argv, env);
+        }
         if (binaries_[i].init_arraysz() != 0) {
             CHECK_EQ(binaries_[i].init_arraysz() % 8, 0);  // Assume 64bits
             LOG(INFO) << LOG_BITS(i) << LOG_BITS(binaries_[i].init_arraysz());
@@ -371,7 +379,7 @@ void DynLoader::Execute(std::vector<std::string> envs) {
                     LOG(WARNING) << LOG_BITS(init_array_funs[j]);
                     break;
                 }
-                reinterpret_cast<dl_init_t>(init_array_funs[j])(0, argv, env);
+                reinterpret_cast<dl_init_t>(init_array_funs[j])(1, argv, env);
             }
         }
     }

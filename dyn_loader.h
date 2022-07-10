@@ -28,6 +28,8 @@ class ELFBinary {
     const std::filesystem::path path() const { return path_; }
     const std::vector<Elf64_Rela> relas() const { return relas_; }
     const std::vector<Elf64_Rela> pltrelas() const { return pltrelas_; }
+    const Elf64_Xword init() const { return init_; }
+    const Elf64_Xword fini() const { return fini_; }
     const Elf64_Xword init_arraysz() const { return init_arraysz_; }
     const Elf64_Xword init_array() const { return init_array_; }
     const Elf64_Xword fini_arraysz() const { return fini_arraysz_; }
@@ -51,6 +53,8 @@ class ELFBinary {
     Elf64_Xword pltrelsz_ = 0;
     Elf64_Xword pltrel_ = 0;
     Elf64_Xword pltrelent_ = 0;
+    Elf64_Xword init_ = 0;
+    Elf64_Xword fini_ = 0;
     Elf64_Xword init_arraysz_ = 0;
     Elf64_Xword init_array_ = 0;
     Elf64_Xword fini_arraysz_ = 0;

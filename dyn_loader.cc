@@ -373,7 +373,8 @@ void DynLoader::Execute(std::vector<std::string> envs) {
             for (long unsigned int j = 0; j < binaries_[i].init_arraysz() / 8;
                  j++) {
                 LOG(INFO) << LOG_KEY(binaries_[i].filename())
-                          << LOG_BITS(binaries_[i].init_array());
+                          << LOG_BITS(binaries_[i].init_array())
+                          << LOG_BITS(init_array_funs[j]);
                 if (reinterpret_cast<dl_init_t>(init_array_funs[j]) ==
                     nullptr) {
                     LOG(WARNING) << LOG_BITS(init_array_funs[j]);

@@ -44,6 +44,14 @@
 #define SHARED
 #define IS_IN(lib) 0
 #define attribute_hidden __attribute__((visibility("hidden")))
+#define attribute_relro __attribute__((section(".data.rel.ro")))
+#define rtld_hidden_proto(name, attrs...)
+#define libc_hidden_proto(name, attrs...)
+
+struct auditstate {
+    uintptr_t cookie;
+    unsigned int bindflags;
+};
 
 __BEGIN_DECLS
 
@@ -342,17 +350,18 @@ EXTERN struct link_namespaces {
     struct link_map *libc_map;
 
     /* Search table for unique objects.  */
-    struct unique_sym_table {
-        __rtld_lock_define_recursive(, lock) struct unique_sym {
-            uint32_t hashval;
-            const char *name;
-            const ElfW(Sym) * sym;
-            const struct link_map *map;
-        } * entries;
-        size_t size;
-        size_t n_elements;
-        void (*free)(void *);
-    } _ns_unique_sym_table;
+    // TODO (akawashiro)
+    // struct unique_sym_table {
+    //     __rtld_lock_define_recursive(, lock) struct unique_sym {
+    //         uint32_t hashval;
+    //         const char *name;
+    //         const ElfW(Sym) * sym;
+    //         const struct link_map *map;
+    //     } * entries;
+    //     size_t size;
+    //     size_t n_elements;
+    //     void (*free)(void *);
+    // } _ns_unique_sym_table;
     /* Keep track of changes to each namespace' list.  */
     struct r_debug_extended _ns_debug;
 } _dl_ns[DL_NNS];
@@ -366,21 +375,24 @@ EXTERN size_t _dl_nns;
    This must be a recursive lock since the initializer function of
    the loaded object might as well require a call to this function.
    At this time it is not anymore a problem to modify the tables.  */
-__rtld_lock_define_recursive(EXTERN, _dl_load_lock)
-    /* This lock is used to keep __dl_iterate_phdr from inspecting the
-       list of loaded objects while an object is added to or removed
-       from that list.  */
-    __rtld_lock_define_recursive(EXTERN, _dl_load_write_lock)
-    /* This lock protects global and module specific TLS related data.
-       E.g. it is held in dlopen and dlclose when GL(dl_tls_generation),
-       GL(dl_tls_max_dtv_idx) or GL(dl_tls_dtv_slotinfo_list) are
-       accessed and when TLS related relocations are processed for a
-       module.  It was introduced to keep pthread_create accessing TLS
-       state that is being set up.  */
-    __rtld_lock_define_recursive(EXTERN, _dl_load_tls_lock)
+// TODO (akawashiro)
+// __rtld_lock_define_recursive(EXTERN, _dl_load_lock)
+/* This lock is used to keep __dl_iterate_phdr from inspecting the
+   list of loaded objects while an object is added to or removed
+   from that list.  */
+// TODO (akawashiro)
+// __rtld_lock_define_recursive(EXTERN, _dl_load_write_lock)
+/* This lock protects global and module specific TLS related data.
+   E.g. it is held in dlopen and dlclose when GL(dl_tls_generation),
+   GL(dl_tls_max_dtv_idx) or GL(dl_tls_dtv_slotinfo_list) are
+   accessed and when TLS related relocations are processed for a
+   module.  It was introduced to keep pthread_create accessing TLS
+   state that is being set up.  */
+// TODO (akawashiro)
+// __rtld_lock_define_recursive(EXTERN, _dl_load_tls_lock)
 
-    /* Incremented whenever something may have been added to dl_loaded.  */
-    EXTERN unsigned long long _dl_load_adds;
+/* Incremented whenever something may have been added to dl_loaded.  */
+EXTERN unsigned long long _dl_load_adds;
 
 /* The object to be initialized first.  */
 EXTERN struct link_map *_dl_initfirst;
@@ -497,7 +509,8 @@ EXTERN int _dl_stack_cache_lock;
 
     /* Array of __pthread structures and its lock.  */
     EXTERN struct __pthread **_dl_pthread_threads;
-    __libc_rwlock_define(EXTERN, _dl_pthread_threads_lock)
+// TODO (akawashiro)
+// __libc_rwlock_define(EXTERN, _dl_pthread_threads_lock)
 #endif
 #ifdef SHARED
 }
@@ -527,7 +540,7 @@ extern struct rtld_global _rtld_global __rtld_global_attribute__;
 #else
 #define GLRO(name) _rtld_global_ro._##name
 #endif
-        struct rtld_global_ro {
+    struct rtld_global_ro {
 #endif
 
 /* If nonzero the appropriate debug information is printed.  */
@@ -562,7 +575,8 @@ EXTERN size_t _dl_minsigstacksize;
 EXTERN int _dl_inhibit_cache;
 
 /* Copy of the content of `_dl_main_searchlist' at startup time.  */
-EXTERN struct r_scope_elem _dl_initial_searchlist;
+// TODO (akawashiro)
+// EXTERN struct r_scope_elem _dl_initial_searchlist;
 
 /* CLK_TCK as reported by the kernel.  */
 EXTERN int _dl_clktck;
@@ -749,7 +763,8 @@ int _dl_make_stacks_executable(void **stack_endp) attribute_hidden;
            A threads library can change it.  The ld.so implementation changes
            the permissions of the main stack only.  */
         extern int _dl_make_stack_executable(void **stack_endp);
-        rtld_hidden_proto(_dl_make_stack_executable)
+        // TODO (akawashiro)
+        // rtld_hidden_proto(_dl_make_stack_executable)
 #endif
 
 /* Variable pointing to the end of the stack (or close to it).  This value
@@ -788,10 +803,11 @@ extern unsigned int _dl_skip_args_internal attribute_hidden
 
 /* Flag set at startup and cleared when the last initializer has run.  */
 extern int _dl_starting_up;
-weak_extern(_dl_starting_up) rtld_hidden_proto(_dl_starting_up)
+// TODO (akawashiro)
+// weak_extern(_dl_starting_up) rtld_hidden_proto(_dl_starting_up)
 
-    /* Random data provided by the kernel.  */
-    extern void *_dl_random attribute_hidden attribute_relro;
+/* Random data provided by the kernel.  */
+extern void *_dl_random attribute_hidden attribute_relro;
 
 /* Write message on the debug file descriptor.  The parameters are
    interpreted as for a `printf' call.  All the lines start with a
@@ -1031,8 +1047,9 @@ const ElfW(Sym) * _dl_lookup_direct(struct link_map *map,
                                     uint32_t version_hash) attribute_hidden;
 
 /* Add the new link_map NEW to the end of the namespace list.  */
-extern void _dl_add_to_namespace_list(struct link_map *new,
-                                      Lmid_t nsid) attribute_hidden;
+// TODO (akawashiro)
+// extern void _dl_add_to_namespace_list(struct link_map *new,
+// Lmid_t nsid) attribute_hidden;
 
 /* Allocate a `struct link_map' for a new object being loaded.  */
 extern struct link_map *_dl_new_object(char *realname, const char *libname,
@@ -1214,8 +1231,9 @@ void *_dl_early_allocate(size_t size) attribute_hidden;
 
 /* Initialize the DSO sort algorithm to use.  */
 #if !HAVE_TUNABLES
-static inline void __always_inline _dl_sort_maps_init(void) {
-    /* This is optimized out if tunables are not enabled.  */
+// TODO (akawashiro)
+// static inline void __always_inline _dl_sort_maps_init(void) {
+/* This is optimized out if tunables are not enabled.  */
 }
 #else
         extern void _dl_sort_maps_init(void) attribute_hidden;
@@ -1223,7 +1241,8 @@ static inline void __always_inline _dl_sort_maps_init(void) {
 
 /* Initialization of libpthread for statically linked applications.
    If libpthread is not linked in, this is an empty function.  */
-void __pthread_initialize_minimal(void) weak_function;
+// TODO (akawashiro)
+// void __pthread_initialize_minimal(void) weak_function;
 
 /* Allocate memory for static TLS block (unless MEM is nonzero) and dtv.  */
 extern void *_dl_allocate_tls(void *mem);
@@ -1291,7 +1310,8 @@ extern int _dl_addr_inside_object(struct link_map *l,
                                   const ElfW(Addr) addr) attribute_hidden;
 
 /* Show show of an object.  */
-extern void _dl_show_scope(struct link_map *new, int from) attribute_hidden;
+// TODO (akawashiro)
+// extern void _dl_show_scope(struct link_map *new, int from) attribute_hidden;
 
 extern struct link_map *_dl_find_dso_for_object(const ElfW(Addr) addr);
 rtld_hidden_proto(_dl_find_dso_for_object)
@@ -1375,20 +1395,23 @@ void _dl_audit_preinit(struct link_map *l);
    RELOC_RESULT is NULL it assumes the symbol to be bind-now and will set
    the flags with LA_SYMB_NOPLTENTER | LA_SYMB_NOPLTEXIT prior calling
    la_symbind{32,64}.  */
-void _dl_audit_symbind(struct link_map *l, struct reloc_result *reloc_result,
-                       const ElfW(Sym) * defsym, DL_FIXUP_VALUE_TYPE *value,
-                       lookup_t result) attribute_hidden;
+// TODO (akawashiro)
+// void _dl_audit_symbind(struct link_map *l, struct reloc_result *reloc_result,
+//                        const ElfW(Sym) * defsym, DL_FIXUP_VALUE_TYPE *value,
+//                        lookup_t result) attribute_hidden;
 /* Same as _dl_audit_symbind, but also sets LA_SYMB_DLSYM flag.  */
 void _dl_audit_symbind_alt(struct link_map *l, const ElfW(Sym) * ref,
                            void **value, lookup_t result);
-rtld_hidden_proto(_dl_audit_symbind_alt) void _dl_audit_pltenter(
-    struct link_map *l, struct reloc_result *reloc_result,
-    DL_FIXUP_VALUE_TYPE *value, void *regs,
-    long int *framesize) attribute_hidden;
-void DL_ARCH_FIXUP_ATTRIBUTE _dl_audit_pltexit(struct link_map *l,
-                                               ElfW(Word) reloc_arg,
-                                               const void *inregs,
-                                               void *outregs) attribute_hidden;
+// TODO (akawashiro)
+// rtld_hidden_proto(_dl_audit_symbind_alt) void _dl_audit_pltenter(
+//     struct link_map *l, struct reloc_result *reloc_result,
+//     DL_FIXUP_VALUE_TYPE *value, void *regs,
+//     long int *framesize) attribute_hidden;
+// void DL_ARCH_FIXUP_ATTRIBUTE _dl_audit_pltexit(struct link_map *l,
+//                                                ElfW(Word) reloc_arg,
+//                                                const void *inregs,
+//                                                void *outregs)
+//                                                attribute_hidden;
 #endif /* SHARED */
 
 #if PTHREAD_IN_LIBC && defined SHARED
@@ -1418,6 +1441,7 @@ void __rtld_libc_freeres(void) attribute_hidden;
 void __thread_gscope_wait(void) attribute_hidden;
 #define THREAD_GSCOPE_WAIT() __thread_gscope_wait()
 
-__END_DECLS
+// TODO (akawashiro)
+// __END_DECLS
 
 #endif /* ldsodefs.h */

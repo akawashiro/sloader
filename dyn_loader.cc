@@ -11,6 +11,8 @@
 
 #include <cstring>
 
+#include "ldsodefs.h"
+
 namespace {
 void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res,
                        const std::string& filename) {
@@ -347,15 +349,15 @@ DynLoader::ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry) {
 // Copied from glibc
 // Type of a constructor function, in DT_INIT, DT_INIT_ARRAY, DT_PREINIT_ARRAY.
 // argc, argv, env
-typedef void (*dl_init_t)(int, const char**, const char**);
+typedef void (*dl_init_t)(int, char**, char**);
 
 void DynLoader::Execute(std::vector<std::string> envs) {
     // TODO: Pass arguments
-    const char* argv[] = {main_path_.c_str()};
-    const char** env = reinterpret_cast<const char**>(
-        malloc(sizeof(const char*) * envs.size()));
+    char* argv[] = {const_cast<char*>(main_path_.c_str())};
+    char** env =
+        reinterpret_cast<char**>(malloc(sizeof(const char*) * envs.size()));
     for (size_t i = 0; i < envs.size(); i++) {
-        env[i] = envs[i].c_str();
+        env[i] = const_cast<char*>(envs[i].c_str());
     }
 
     for (int i = binaries_.size() - 1; 0 <= i; i--) {

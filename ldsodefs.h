@@ -741,7 +741,8 @@ extern struct rtld_global_ro _rtld_global_ro attribute_relro
 #else
 /* We cheat a bit here.  We declare the variable as as const even
    though it is at startup.  */
-extern const struct rtld_global_ro _rtld_global_ro attribute_relro
+// TODO (akawashiro): Remove const
+extern struct rtld_global_ro _rtld_global_ro attribute_relro
     __rtld_global_attribute__;
 #endif
 #undef __rtld_global_attribute__

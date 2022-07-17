@@ -13,6 +13,8 @@
 
 #include "ldsodefs.h"
 
+struct rtld_global_ro _rtld_global_ro;
+
 namespace {
 void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res,
                        const std::string& filename) {
@@ -558,24 +560,31 @@ void DynLoader::Relocate() {
         }
 
         for (const auto& r : relas) {
-            LOG(INFO) << ShowRela(r);
             CHECK_LT(ELF64_R_SYM(r.r_info), bin.symtabs().size());
             Elf64_Sym s = bin.symtabs()[ELF64_R_SYM(r.r_info)];
             std::string name = s.st_name + bin.strtab();
-            LOG(INFO) << LOG_KEY(name);
+            LOG(INFO) << ShowRela(r) << LOG_KEY(name);
 
             switch (ELF64_R_TYPE(r.r_info)) {
                 case R_X86_64_GLOB_DAT:
                 case R_X86_64_JUMP_SLOT: {
                     LOG(INFO) << ShowRelocationType(ELF64_R_TYPE(r.r_info));
                     const auto opt = SearchSym(name);
-                    if (!opt) {
+                    Elf64_Addr sym_addr;
+
+                    // ld.so offers some symbols.
+                    if (name == "_rtld_global_ro") {
+                        sym_addr =
+                            reinterpret_cast<Elf64_Addr>(&_rtld_global_ro);
+                    } else if (opt) {
+                        const auto [bin_index, sym_index] = opt.value();
+                        sym_addr =
+                            binaries_[bin_index].GetSymbolAddr(sym_index);
+                    } else {
                         LOG(WARNING) << "Cannot find " << name;
                         break;
                     }
-                    const auto [bin_index, sym_index] = opt.value();
-                    const Elf64_Addr sym_addr =
-                        binaries_[bin_index].GetSymbolAddr(sym_index);
+
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
                         bin.base_addr() + r.r_offset);
                     LOG(INFO) << LOG_KEY(reloc_addr) << LOG_BITS(*reloc_addr)

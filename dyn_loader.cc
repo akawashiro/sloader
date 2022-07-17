@@ -15,6 +15,51 @@
 
 struct rtld_global_ro _rtld_global_ro;
 
+void* _dl_allocate_tls(void* mem) {
+    LOG(INFO) << LOG_BITS(mem);
+    return nullptr;
+    // return _dl_allocate_tls_init(
+    // mem == NULL ? _dl_allocate_tls_storage() : allocate_dtv(mem), true);
+}
+
+typedef union {
+    int64_t numval;
+    const char* strval;
+} tunable_val_t;
+typedef void (*tunable_callback_t)(tunable_val_t*);
+
+typedef enum { Hoge, Fuga } tunable_id_t;
+
+void __tunable_get_val(tunable_id_t id, void* valp,
+                       tunable_callback_t callback) {
+    return;
+    // TODO (akawashiro)
+    // tunable_t* cur = &tunable_list[id];
+    //
+    // switch (cur->type.type_code) {
+    //     case TUNABLE_TYPE_UINT_64: {
+    //         *((uint64_t*)valp) = (uint64_t)cur->val.numval;
+    //         break;
+    //     }
+    //     case TUNABLE_TYPE_INT_32: {
+    //         *((int32_t*)valp) = (int32_t)cur->val.numval;
+    //         break;
+    //     }
+    //     case TUNABLE_TYPE_SIZE_T: {
+    //         *((size_t*)valp) = (size_t)cur->val.numval;
+    //         break;
+    //     }
+    //     case TUNABLE_TYPE_STRING: {
+    //         *((const char**)valp) = cur->val.strval;
+    //         break;
+    //     }
+    //     default:
+    //         __builtin_unreachable();
+    // }
+    //
+    // if (cur->initialized && callback != NULL) callback(&cur->val);
+}
+
 namespace {
 void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res,
                        const std::string& filename) {
@@ -576,6 +621,12 @@ void DynLoader::Relocate() {
                     if (name == "_rtld_global_ro") {
                         sym_addr =
                             reinterpret_cast<Elf64_Addr>(&_rtld_global_ro);
+                    } else if (name == "_dl_allocate_tls") {
+                        sym_addr =
+                            reinterpret_cast<Elf64_Addr>(&_dl_allocate_tls);
+                    } else if (name == "__tunable_get_val") {
+                        sym_addr =
+                            reinterpret_cast<Elf64_Addr>(&__tunable_get_val);
                     } else if (opt) {
                         const auto [bin_index, sym_index] = opt.value();
                         sym_addr =

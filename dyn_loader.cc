@@ -13,13 +13,29 @@
 
 #include "ldsodefs.h"
 
+struct rtld_global _rtld_global;
 struct rtld_global_ro _rtld_global_ro;
+// GL(dl_ns)[LM_ID_BASE]._ns_loaded = malloc(sizeof(link_map));
 
 void* _dl_allocate_tls(void* mem) {
     LOG(INFO) << LOG_BITS(mem);
     return nullptr;
+    // TODO (akawashiro)
     // return _dl_allocate_tls_init(
     // mem == NULL ? _dl_allocate_tls_storage() : allocate_dtv(mem), true);
+}
+
+void _dl_audit_preinit(struct link_map* l) {
+    return;
+    // TODO (akawashiro)
+    // if (__glibc_likely(GLRO(dl_naudit) == 0)) return;
+    //
+    // struct audit_ifaces* afct = GLRO(dl_audit);
+    // for (unsigned int cnt = 0; cnt < GLRO(dl_naudit); ++cnt) {
+    //     if (afct->preinit != NULL)
+    //         afct->preinit(&link_map_audit_state(l, cnt)->cookie);
+    //     afct = afct->next;
+    // }
 }
 
 typedef union {
@@ -328,6 +344,10 @@ DynLoader::DynLoader(const std::filesystem::path& main_path,
                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
         LOG(INFO) << "errno = " << std::strerror(errno);
         CHECK_EQ(adr, p);
+
+        // TODO (akawashiro)
+        _rtld_global._dl_ns[LM_ID_BASE]._ns_loaded =
+            reinterpret_cast<link_map*>(malloc(sizeof(link_map)));
     }
 
     // Elf64_Addr base_addr = 0x400000 + 0xaaaf000000;
@@ -621,12 +641,17 @@ void DynLoader::Relocate() {
                     if (name == "_rtld_global_ro") {
                         sym_addr =
                             reinterpret_cast<Elf64_Addr>(&_rtld_global_ro);
+                    } else if (name == "_rtld_global") {
+                        sym_addr = reinterpret_cast<Elf64_Addr>(&_rtld_global);
                     } else if (name == "_dl_allocate_tls") {
                         sym_addr =
                             reinterpret_cast<Elf64_Addr>(&_dl_allocate_tls);
                     } else if (name == "__tunable_get_val") {
                         sym_addr =
                             reinterpret_cast<Elf64_Addr>(&__tunable_get_val);
+                    } else if (name == "_dl_audit_preinit") {
+                        sym_addr =
+                            reinterpret_cast<Elf64_Addr>(&_dl_audit_preinit);
                     } else if (opt) {
                         const auto [bin_index, sym_index] = opt.value();
                         sym_addr =

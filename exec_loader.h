@@ -85,7 +85,7 @@ class ExecLoader {
     void Execute(std::vector<std::string> envs) {
         unsigned long at_random = getauxval(AT_RANDOM);
         unsigned long at_pagesz = getauxval(AT_PAGESZ);
-        CHECK_NE(at_random, 0);
+        CHECK_NE(at_random, 0UL);
         LOG(INFO) << LOG_BITS(at_random) << LOG_BITS(at_pagesz);
 
         // Some commented out auxiliary values because they are not appropriate
@@ -201,7 +201,7 @@ std::unique_ptr<ExecLoader> MakeExecLoader(
     CHECK(fd >= 0);
 
     size_t size = lseek(fd, 0, SEEK_END);
-    CHECK_GT(size, 8 + 16);
+    CHECK_GT(size, 8UL + 16UL);
 
     size_t mapped_size = (size + 0xfff) & ~0xfff;
 

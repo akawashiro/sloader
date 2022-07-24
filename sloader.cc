@@ -25,7 +25,7 @@ Elf64_Half GetEType(const std::filesystem::path& filepath) {
     CHECK(fd >= 0);
 
     size_t size = lseek(fd, 0, SEEK_END);
-    CHECK_GT(size, 8 + 16);
+    CHECK_GT(size, 8UL + 16UL);
 
     size_t mapped_size = (size + 0xfff) & ~0xfff;
 
@@ -42,9 +42,7 @@ void ShowHelp(std::ostream& os) {
 }
 
 int main(int argc, char* const argv[], char** envp) {
-    if (getenv("SLOADER_LOG_LEVEL") != NULL) {
-        LOG_LEVEL = StringToLevel(std::string(getenv("SLOADER_LOG_LEVEL")));
-    }
+    google::InitGoogleLogging(argv[0]);
 
     static option long_options[] = {
         {"help", no_argument, nullptr, 'h'},

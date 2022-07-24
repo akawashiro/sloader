@@ -1,35 +1,5 @@
 #include "utils.h"
 
-int LOG_LEVEL = INFO;
-
-std::string LevelToString(int level) {
-    switch (level) {
-        case DEBUG:
-            return "D";
-        case INFO:
-            return "I";
-        case WARNING:
-            return "W";
-        case ERROR:
-            return "E";
-        case FATAL:
-            return "F";
-        default:
-            std::abort();
-    }
-}
-
-std::ofstream null_stream("/dev/null");
-
-int StringToLevel(std::string s) {
-    if (s == "DEBUG") return DEBUG;
-    if (s == "INFO") return INFO;
-    if (s == "WARNING") return WARNING;
-    if (s == "ERROR") return ERROR;
-    if (s == "FATAL") return FATAL;
-    std::abort();
-}
-
 std::vector<std::string> SplitWith(std::string str,
                                    const std::string& delimiter) {
     std::vector<std::string> ret;

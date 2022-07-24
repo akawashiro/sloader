@@ -13,8 +13,8 @@
 
 #include "ldsodefs.h"
 
-struct rtld_global _rtld_global;
-struct rtld_global_ro _rtld_global_ro;
+struct rtld_global sloader_rtld_global;
+struct rtld_global_ro sloader_rtld_global_ro;
 // GL(dl_ns)[LM_ID_BASE]._ns_loaded = malloc(sizeof(link_map));
 
 void* _dl_allocate_tls(void* mem) {
@@ -121,7 +121,7 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     CHECK(fd >= 0);
 
     size_t size = lseek(fd, 0, SEEK_END);
-    CHECK_GT(size, 8 + 16);
+    CHECK_GT(size, 8UL + 16UL);
 
     size_t mapped_size = (size + 0xfff) & ~0xfff;
 
@@ -217,10 +217,10 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
 
 void ELFBinary::ParseDynamic() {
     // Must mmap PT_LOADs before call ParseDynamic.
-    CHECK_NE(base_addr_, 0);
+    CHECK_NE(base_addr_, 0UL);
 
     const size_t dyn_size = sizeof(Elf64_Dyn);
-    CHECK_EQ(file_dynamic_.p_filesz % dyn_size, 0);
+    CHECK_EQ(file_dynamic_.p_filesz % dyn_size, 0U);
 
     // Search DT_STRTAB at first.
     for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
@@ -292,7 +292,7 @@ void ELFBinary::ParseDynamic() {
 
     LOG(INFO) << LOG_KEY(relasz_) << LOG_KEY(relaent_) << LOG_KEY(relacount_);
     if (rela_ != nullptr) {
-        CHECK_EQ(relasz_ % relaent_, 0);
+        CHECK_EQ(relasz_ % relaent_, 0UL);
         Elf64_Rela* r = rela_;
         for (size_t i = 0; i < relasz_ / relaent_; i++, r++) {
             relas_.emplace_back(*r);
@@ -302,8 +302,8 @@ void ELFBinary::ParseDynamic() {
 
     LOG(INFO) << LOG_KEY(pltrelsz_) << LOG_KEY(pltrelent_);
     if (jmprel_ != nullptr) {
-        CHECK_EQ(pltrelsz_ % pltrelent_, 0);
-        CHECK_EQ(pltrel_, DT_RELA);
+        CHECK_EQ(pltrelsz_ % pltrelent_, 0UL);
+        CHECK_EQ(pltrel_, static_cast<unsigned long>(DT_RELA));
         Elf64_Rela* r = jmprel_;
         for (size_t i = 0; i < pltrelsz_ / pltrelent_; i++, r++) {
             pltrelas_.emplace_back(*r);
@@ -346,7 +346,7 @@ DynLoader::DynLoader(const std::filesystem::path& main_path,
         CHECK_EQ(adr, p);
 
         // TODO (akawashiro)
-        _rtld_global._dl_ns[LM_ID_BASE]._ns_loaded =
+        sloader_rtld_global._dl_ns[LM_ID_BASE]._ns_loaded =
             reinterpret_cast<link_map*>(malloc(sizeof(link_map)));
     }
 
@@ -433,7 +433,7 @@ void DynLoader::Execute(std::vector<std::string> envs) {
                                         binaries_[i].base_addr())(1, argv, env);
         }
         if (binaries_[i].init_arraysz() != 0) {
-            CHECK_EQ(binaries_[i].init_arraysz() % 8, 0);  // Assume 64bits
+            CHECK_EQ(binaries_[i].init_arraysz() % 8, 0UL);  // Assume 64bits
             LOG(INFO) << LOG_BITS(i) << LOG_BITS(binaries_[i].init_arraysz());
             Elf64_Addr* init_array_funs =
                 reinterpret_cast<Elf64_Addr*>((reinterpret_cast<char**>(
@@ -456,7 +456,7 @@ void DynLoader::Execute(std::vector<std::string> envs) {
 
     unsigned long at_random = getauxval(AT_RANDOM);
     unsigned long at_pagesz = getauxval(AT_PAGESZ);
-    CHECK_NE(at_random, 0);
+    CHECK_NE(at_random, 0UL);
     LOG(INFO) << LOG_BITS(at_random) << LOG_BITS(at_pagesz);
 
     // Some commented out auxiliary values because they are not appropriate
@@ -639,10 +639,11 @@ void DynLoader::Relocate() {
 
                     // ld.so offers some symbols.
                     if (name == "_rtld_global_ro") {
-                        sym_addr =
-                            reinterpret_cast<Elf64_Addr>(&_rtld_global_ro);
+                        sym_addr = reinterpret_cast<Elf64_Addr>(
+                            &sloader_rtld_global_ro);
                     } else if (name == "_rtld_global") {
-                        sym_addr = reinterpret_cast<Elf64_Addr>(&_rtld_global);
+                        sym_addr =
+                            reinterpret_cast<Elf64_Addr>(&sloader_rtld_global);
                     } else if (name == "_dl_allocate_tls") {
                         sym_addr =
                             reinterpret_cast<Elf64_Addr>(&_dl_allocate_tls);

@@ -40,6 +40,8 @@ add_subdirectory(static_struct)
 
 add_subdirectory(constructor)
 
+add_subdirectory(tls)
+
 if(CUSTOM_LIBC_PATH)
   add_custom_target(
     hello_static_custom_libc ALL

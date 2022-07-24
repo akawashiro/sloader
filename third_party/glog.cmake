@@ -4,7 +4,7 @@ project(glog-download NONE)
 include(ExternalProject)
 ExternalProject_Add(glog
     GIT_REPOSITORY    https://github.com/google/glog.git
-    GIT_TAG           v0.4.0
+    GIT_TAG           v0.6.0
     SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/glog"
     BINARY_DIR        ""
     CONFIGURE_COMMAND ""

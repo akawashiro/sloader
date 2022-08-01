@@ -1,11 +1,13 @@
 #include "dyn_loader.h"
 
+#include <asm/prctl.h>
 #include <elf.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/auxv.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -18,7 +20,7 @@ struct rtld_global_ro sloader_rtld_global_ro;
 // GL(dl_ns)[LM_ID_BASE]._ns_loaded = malloc(sizeof(link_map));
 
 void* _dl_allocate_tls(void* mem) {
-    LOG(INFO) << LOG_BITS(mem);
+    LOG(FATAL) << LOG_BITS(mem);
     return nullptr;
     // TODO (akawashiro)
     // return _dl_allocate_tls_init(
@@ -139,6 +141,10 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
         if (ph.p_type == PT_DYNAMIC) {
             LOG(INFO) << "Found PT_DYNAMIC";
             file_dynamic_ = ph;
+        } else if (ph.p_type == PT_TLS) {
+            LOG(INFO) << "Found PT_TLS";
+            has_tls_ = true;
+            file_tls_ = ph;
         }
     }
 }
@@ -548,6 +554,55 @@ void DynLoader::Execute(std::vector<std::string> envs) {
     LOG(INFO) << LOG_BITS(binaries_[0].ehdr().e_entry +
                           binaries_[0].base_addr())
               << std::endl;
+
+    // Ad-hoc TLS initialization
+    if (binaries_[0].has_tls()) {
+        void* tls_block = malloc(1024 * sizeof(char));
+        memset(tls_block, 0x1, 1024);
+        for (size_t i = 0; i < 1024; i++) {
+            if (i < 512 - 20) {
+                *(reinterpret_cast<char*>(tls_block) + i) = 0xa;
+            } else if (512 - 20 <= i && i < 512 - 16) {
+                *(reinterpret_cast<char*>(tls_block) + i) = 0xb;
+            } else if (512 - 16 <= i && i < 512 - 12) {
+                *(reinterpret_cast<char*>(tls_block) + i) = 0xc;
+            } else if (512 - 12 <= i && i < 512 - 8) {
+                *(reinterpret_cast<char*>(tls_block) + i) = 0xd;
+            } else if (512 - 8 <= i && i < 512 - 4) {
+                *(reinterpret_cast<char*>(tls_block) + i) = 0xe;
+            } else if (512 - 4 <= i && i < 512) {
+                *(reinterpret_cast<char*>(tls_block) + i) = 0xf;
+            }
+        }
+
+        LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block))
+                  << LOG_BITS(reinterpret_cast<uint64_t>(
+                         binaries_[0].file_tls().p_memsz));
+        LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(
+                         binaries_[0].file_tls().p_memsz))
+                  << LOG_BITS(reinterpret_cast<uint64_t>(
+                         binaries_[0].file_tls().p_filesz));
+
+        memcpy(reinterpret_cast<char*>(tls_block) + 512 -
+                   binaries_[0].file_tls().p_memsz,
+               reinterpret_cast<const void*>(binaries_[0].base_addr() +
+                                             binaries_[0].file_tls().p_vaddr),
+               binaries_[0].file_tls().p_memsz);
+        memset(
+            reinterpret_cast<char*>(tls_block) + 512 -
+                (binaries_[0].file_tls().p_memsz -
+                 binaries_[0].file_tls().p_filesz),
+            0x0,
+            binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz);
+
+        *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + 512) =
+            reinterpret_cast<char*>(tls_block) + 512;
+
+        syscall(
+            SYS_arch_prctl, ARCH_SET_FS,
+            reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + 512));
+    }
+
     ExecuteCore(stack, stack_num,
                 binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
 

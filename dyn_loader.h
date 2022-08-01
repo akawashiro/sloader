@@ -23,6 +23,8 @@ class ELFBinary {
     const std::vector<Elf64_Sym> symtabs() const { return symtabs_; }
     std::optional<std::filesystem::path> runpath() { return runpath_; }
     std::optional<std::filesystem::path> rpath() { return rpath_; }
+    const bool has_tls() const { return has_tls_; }
+    const Elf64_Phdr file_tls() const { return file_tls_; }
     const Elf64_Addr base_addr() const { return base_addr_; }
     const Elf64_Addr end_addr() const { return end_addr_; }
     const std::filesystem::path path() const { return path_; }
@@ -64,6 +66,8 @@ class ELFBinary {
     Elf64_Xword syment_ = 0;
     std::vector<Elf64_Phdr> file_phdrs_;
     Elf64_Phdr file_dynamic_;
+    bool has_tls_ = false;
+    Elf64_Phdr file_tls_;
     std::vector<std::string> neededs_;
     std::optional<std::filesystem::path> runpath_ = std::nullopt;
     std::optional<std::filesystem::path> rpath_ = std::nullopt;

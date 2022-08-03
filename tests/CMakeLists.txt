@@ -40,7 +40,9 @@ add_subdirectory(static_struct)
 
 add_subdirectory(constructor)
 
-add_subdirectory(tls)
+add_subdirectory(local_exec)
+
+add_subdirectory(initial_exec)
 
 if(CUSTOM_LIBC_PATH)
   add_custom_target(

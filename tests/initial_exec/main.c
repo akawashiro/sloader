@@ -12,8 +12,6 @@ extern uint32_t j;
 void set_i0() { i0 = 0xaabbccdd; }
 
 int main() {
-    set_i0();
-
     RAW_PRINT_STR("__thread uint32_t i0=");
     RAW_PRINT_HEX(i0);
     RAW_PRINT_STR("\n&i0=");

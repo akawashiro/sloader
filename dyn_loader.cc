@@ -340,7 +340,7 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
     return symtabs()[symbol_index].st_value + base_addr();
 }
 
-const Elf64_Addr ELFBinary::TLSOffset(const std::string& name) {
+const Elf64_Addr ELFBinary::TLSVariableOffset(const std::string& name) {
     Elf64_Addr offset = 0;
     for (size_t i = 0; i < symtabs().size(); i++) {
         Elf64_Sym s = symtabs()[i];
@@ -571,53 +571,60 @@ void DynLoader::Execute(std::vector<std::string> envs) {
                           binaries_[0].base_addr())
               << std::endl;
 
-    // Ad-hoc TLS initialization
-    if (binaries_[0].has_tls()) {
-        void* tls_block = malloc(1024 * sizeof(char));
-        memset(tls_block, 0x1, 1024);
-        for (size_t i = 0; i < 1024; i++) {
-            if (i < 512 - 20) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xa;
-            } else if (512 - 20 <= i && i < 512 - 16) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xb;
-            } else if (512 - 16 <= i && i < 512 - 12) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xc;
-            } else if (512 - 12 <= i && i < 512 - 8) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xd;
-            } else if (512 - 8 <= i && i < 512 - 4) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xe;
-            } else if (512 - 4 <= i && i < 512) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xf;
-            }
+    void* tls_block = malloc(1024 * sizeof(char));
+    memset(tls_block, 0x1, 1024);
+    for (size_t i = 0; i < 1024; i++) {
+        if (i < 512 - 20) {
+            *(reinterpret_cast<char*>(tls_block) + i) = 0xa;
+        } else if (512 - 20 <= i && i < 512 - 16) {
+            *(reinterpret_cast<char*>(tls_block) + i) = 0xb;
+        } else if (512 - 16 <= i && i < 512 - 12) {
+            *(reinterpret_cast<char*>(tls_block) + i) = 0xc;
+        } else if (512 - 12 <= i && i < 512 - 8) {
+            *(reinterpret_cast<char*>(tls_block) + i) = 0xd;
+        } else if (512 - 8 <= i && i < 512 - 4) {
+            *(reinterpret_cast<char*>(tls_block) + i) = 0xe;
+        } else if (512 - 4 <= i && i < 512) {
+            *(reinterpret_cast<char*>(tls_block) + i) = 0xf;
         }
-
-        LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block))
-                  << LOG_BITS(reinterpret_cast<uint64_t>(
-                         binaries_[0].file_tls().p_memsz));
-        LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(
-                         binaries_[0].file_tls().p_memsz))
-                  << LOG_BITS(reinterpret_cast<uint64_t>(
-                         binaries_[0].file_tls().p_filesz));
-
-        memcpy(reinterpret_cast<char*>(tls_block) + 512 -
-                   binaries_[0].file_tls().p_memsz,
-               reinterpret_cast<const void*>(binaries_[0].base_addr() +
-                                             binaries_[0].file_tls().p_vaddr),
-               binaries_[0].file_tls().p_memsz);
-        memset(
-            reinterpret_cast<char*>(tls_block) + 512 -
-                (binaries_[0].file_tls().p_memsz -
-                 binaries_[0].file_tls().p_filesz),
-            0x0,
-            binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz);
-
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + 512) =
-            reinterpret_cast<char*>(tls_block) + 512;
-
-        syscall(
-            SYS_arch_prctl, ARCH_SET_FS,
-            reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + 512));
     }
+
+    LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block))
+              << LOG_BITS(reinterpret_cast<uint64_t>(
+                     reinterpret_cast<char*>(tls_block) + 512));
+    // Ad-hoc TLS initialization
+    for (size_t i = 0; i < binaries_.size(); i++) {
+        if (binaries_[i].has_tls()) {
+            LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block))
+                      << LOG_BITS(reinterpret_cast<uint64_t>(
+                             binaries_[i].file_tls().p_memsz))
+                      << LOG_BITS(reinterpret_cast<uint64_t>(
+                             binaries_[i].file_tls().p_filesz))
+                      << LOG_KEY(binaries_[i].path()) << LOG_KEY(TLSOffset(i))
+                      << LOG_KEY(binaries_[i].file_tls().p_memsz);
+
+            // Copy initial values
+            memcpy(
+                reinterpret_cast<char*>(tls_block) + 512 -
+                    binaries_[i].file_tls().p_memsz - TLSOffset(i),
+                reinterpret_cast<const void*>(binaries_[i].base_addr() +
+                                              binaries_[i].file_tls().p_vaddr),
+                binaries_[i].file_tls().p_memsz);
+
+            // Clear .tbss section
+            memset(reinterpret_cast<char*>(tls_block) + 512 -
+                       (binaries_[i].file_tls().p_memsz -
+                        binaries_[i].file_tls().p_filesz) -
+                       TLSOffset(i),
+                   0x0,
+                   binaries_[i].file_tls().p_memsz -
+                       binaries_[i].file_tls().p_filesz);
+        }
+    }
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + 512) =
+        reinterpret_cast<char*>(tls_block) + 512;
+    syscall(SYS_arch_prctl, ARCH_SET_FS,
+            reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + 512));
 
     ExecuteCore(stack, stack_num,
                 binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
@@ -683,6 +690,18 @@ std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(
         }
     }
     return std::nullopt;
+}
+
+Elf64_Addr DynLoader::TLSOffset(const size_t bin_index) {
+    CHECK_LT(bin_index, binaries_.size());
+    // TODO
+    Elf64_Addr tlsoffset = 8;
+    for (size_t i = 0; i < bin_index; i++) {
+        if (binaries_[i].has_tls()) {
+            tlsoffset += binaries_[i].file_tls().p_memsz;
+        }
+    }
+    return tlsoffset;
 }
 
 void DynLoader::Relocate() {
@@ -781,7 +800,9 @@ void DynLoader::Relocate() {
                               << LOG_KEY(sym_index) << LOG_KEY(name);
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
                         bin.base_addr() + r.r_offset);
-                    Elf64_Addr offset = binaries_[bin_index].TLSOffset(name);
+                    Elf64_Addr offset =
+                        -(TLSOffset(bin_index) +
+                          binaries_[bin_index].TLSVariableOffset(name));
                     *reloc_addr = offset;
 
                     break;

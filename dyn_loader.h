@@ -38,7 +38,7 @@ class ELFBinary {
     const Elf64_Xword fini_array() const { return fini_array_; }
     const char* strtab() const { return strtab_; }
     const Elf64_Ehdr ehdr() const { return ehdr_; }
-    const Elf64_Addr TLSOffset(const std::string& name);
+    const Elf64_Addr TLSVariableOffset(const std::string& name);
 
    private:
     const std::filesystem::path path_;
@@ -83,6 +83,7 @@ class DynLoader {
     void Execute(std::vector<std::string> envs);
 
    private:
+    Elf64_Addr TLSOffset(const size_t bin_index);
     void __attribute__((noinline))
     ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry);
     std::filesystem::path FindLibrary(

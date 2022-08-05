@@ -36,7 +36,7 @@ int main() {
     RAW_PRINT_HEX(&i3);
     RAW_PRINT_STR("\n");
 
-    RAW_BREAK();
+    // RAW_BREAK();
     i0 = 0xeeeeeeee;
     i1 = 0xffffffff;
 

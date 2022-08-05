@@ -341,16 +341,13 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
 }
 
 const Elf64_Addr ELFBinary::TLSVariableOffset(const std::string& name) {
-    Elf64_Addr offset = 0;
     for (size_t i = 0; i < symtabs().size(); i++) {
         Elf64_Sym s = symtabs()[i];
         std::string n = s.st_name + strtab();
         if (n == name && s.st_shndx != SHN_UNDEF) {
             LOG(INFO) << "Found " << name << " at index " << i << " of "
                       << path();
-            return offset;
-        } else if (ELF64_ST_TYPE(s.st_info) == STT_TLS) {
-            offset += s.st_size;
+            return s.st_value;
         }
     }
     LOG(FATAL) << "Failed to look up " << name << " in " << filename();
@@ -800,8 +797,10 @@ void DynLoader::Relocate() {
                               << LOG_KEY(sym_index) << LOG_KEY(name);
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
                         bin.base_addr() + r.r_offset);
+                    CHECK(binaries_[bin_index].has_tls());
                     Elf64_Addr offset =
                         -(TLSOffset(bin_index) +
+                          binaries_[bin_index].file_tls().p_memsz -
                           binaries_[bin_index].TLSVariableOffset(name));
                     *reloc_addr = offset;
 

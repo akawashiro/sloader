@@ -17,7 +17,7 @@ class ELFBinary {
     ELFBinary(const std::filesystem::path path);
     void Load(Elf64_Addr base_addr, std::ofstream& map_file);
     void ParseDynamic();
-    const std::string filename() { return path_.filename().string(); }
+    const std::string filename() const { return path_.filename().string(); }
     const Elf64_Addr GetSymbolAddr(const size_t symbol_index);
     std::vector<std::string> neededs() { return neededs_; }
     const std::vector<Elf64_Sym> symtabs() const { return symtabs_; }
@@ -38,6 +38,7 @@ class ELFBinary {
     const Elf64_Xword fini_array() const { return fini_array_; }
     const char* strtab() const { return strtab_; }
     const Elf64_Ehdr ehdr() const { return ehdr_; }
+    const Elf64_Addr TLSOffset(const std::string& name);
 
    private:
     const std::filesystem::path path_;

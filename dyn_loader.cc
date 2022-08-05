@@ -340,6 +340,22 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
     return symtabs()[symbol_index].st_value + base_addr();
 }
 
+const Elf64_Addr ELFBinary::TLSOffset(const std::string& name) {
+    Elf64_Addr offset = 0;
+    for (size_t i = 0; i < symtabs().size(); i++) {
+        Elf64_Sym s = symtabs()[i];
+        std::string n = s.st_name + strtab();
+        if (n == name && s.st_shndx != SHN_UNDEF) {
+            LOG(INFO) << "Found " << name << " at index " << i << " of "
+                      << path();
+            return offset;
+        } else if (ELF64_ST_TYPE(s.st_info) == STT_TLS) {
+            offset += s.st_size;
+        }
+    }
+    LOG(FATAL) << "Failed to look up " << name << " in " << filename();
+}
+
 DynLoader::DynLoader(const std::filesystem::path& main_path,
                      const std::vector<std::string>& envs)
     : main_path_(main_path), envs_(envs) {
@@ -752,6 +768,30 @@ void DynLoader::Relocate() {
                     break;
                 }
                 case R_X86_64_TPOFF64: {
+                    const auto opt = SearchSym(name);
+                    if (!opt) {
+                        // TODO
+                        LOG(WARNING) << "Cannot find " << LOG_KEY(name)
+                                     << LOG_KEY(bin.path());
+                        break;
+                    }
+                    const auto [bin_index, sym_index] = opt.value();
+                    LOG(INFO) << LOG_KEY(bin_index)
+                              << LOG_KEY(binaries_[bin_index].filename())
+                              << LOG_KEY(sym_index) << LOG_KEY(name);
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
+                        bin.base_addr() + r.r_offset);
+                    Elf64_Addr offset = binaries_[bin_index].TLSOffset(name);
+                    *reloc_addr = offset;
+
+                    break;
+                }
+                case R_X86_64_DTPMOD64: {
+                    // TODO: Must be wrong
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(
+                        bin.base_addr() + r.r_offset);
+                    *reloc_addr = 0;
+
                     break;
                 }
                 case R_X86_64_COPY: {

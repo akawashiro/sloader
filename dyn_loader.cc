@@ -204,9 +204,7 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
                   << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ +
                                                        ph.p_offset))
                   << LOG_BITS(ph.p_filesz);
-        std::string n = std::string("                 ") + path().string();
-        map_file << n.substr(n.size() - 16, 16) << " "
-                 << HexString(ph.p_offset, 16) << "-"
+        map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-"
                  << HexString(ph.p_offset + ph.p_filesz, 16) << " " << flags_str
                  << " " << HexString(ph.p_filesz, 16) << " => "
                  << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)

@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-comp = subprocess.run(sys.argv[1:], capture_output=True)
+comp = subprocess.run(sys.argv[1:], capture_output=True, bufsize=0)
 print(comp)
 print("cmd: ", " ".join(sys.argv[1:]))
 stdout = comp.stdout.decode("utf-8")

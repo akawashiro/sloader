@@ -57,5 +57,7 @@ int main(int argc, char** argv, char** envp) {
         char* thisEnv = *env;
         printf("%s\n", thisEnv);
     }
+    // TODO: Need this?
+    fflush(stdout);
     return 0;
 }

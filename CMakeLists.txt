@@ -24,6 +24,8 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/glog
                     ${CMAKE_CURRENT_BINARY_DIR}/glog/src)
 add_definitions(-DC10_USE_GLOG=1)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/raw_write)
+
 add_executable(sloader sloader.cc dyn_loader.cc utils.cc)
 target_link_libraries(sloader glog)
 target_compile_options(sloader PUBLIC -Wall -Werror)

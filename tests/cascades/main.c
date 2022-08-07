@@ -1,6 +1,6 @@
 void fuga();
 
 int main() {
-  fuga();
-  return 0;
+    fuga();
+    return 0;
 }

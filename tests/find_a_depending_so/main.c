@@ -1,3 +1,5 @@
 int hoge(int a, int b);
 
-int main() { return hoge(2, 40); }
+int main() {
+    return hoge(2, 40);
+}

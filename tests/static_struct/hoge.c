@@ -7,29 +7,29 @@
 char buf[9];
 
 struct Hoge {
-  int idx;
-  char buf[16];
-  void *p;
+    int idx;
+    char buf[16];
+    void* p;
 };
 
 static struct Hoge hoge;
 
 void print_hex(unsigned long var) {
-  // Simple itoa
-  for (int i = 0; i < 8; i++) {
-    char c = (var >> (4 * (7 - i))) & (0xf);
-    c += (c < 10) ? '0' : 'a' - 10;
-    buf[i] = c;
-  }
-  buf[8] = 0;
+    // Simple itoa
+    for (int i = 0; i < 8; i++) {
+        char c = (var >> (4 * (7 - i))) & (0xf);
+        c += (c < 10) ? '0' : 'a' - 10;
+        buf[i] = c;
+    }
+    buf[8] = 0;
 
-  RAW_PRINT_STR(buf);
-  RAW_PRINT_STR("\n");
+    RAW_PRINT_STR(buf);
+    RAW_PRINT_STR("\n");
 }
 
 void print_hoge_var() {
-  hoge.idx = 0xdeadbeef;
-  RAW_PRINT_STR("hoge.idx=0x");
-  print_hex(hoge.idx);
-  RAW_PRINT_STR("\n");
+    hoge.idx = 0xdeadbeef;
+    RAW_PRINT_STR("hoge.idx=0x");
+    print_hex(hoge.idx);
+    RAW_PRINT_STR("\n");
 }

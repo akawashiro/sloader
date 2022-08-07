@@ -39,25 +39,22 @@
         __asm__ volatile("syscall;\n" : : "a"(SYS_exit), "D"(status) :); \
     } while (0)
 
-#define RAW_WRITE(fd, buf, count)                                      \
-    do {                                                               \
-        register unsigned long RAW_rsi##__LINE__ __asm__("rsi") =      \
-            (unsigned long)buf;                                        \
-        __asm__ volatile("syscall;\n"                                  \
-                         : "+r"(RAW_rsi##__LINE__)                     \
-                         : "a"(SYS_write), "D"(fd), "d"(count)         \
-                         : "r8", "r10", "rcx", "r11", "memory", "cc"); \
-        /* The input registers may be broken by syscall */             \
-        __asm__ volatile("" ::: "rax", "rdi", "rdx");                  \
+#define RAW_WRITE(fd, buf, count)                                                     \
+    do {                                                                              \
+        register unsigned long RAW_rsi##__LINE__ __asm__("rsi") = (unsigned long)buf; \
+        __asm__ volatile("syscall;\n"                                                 \
+                         : "+r"(RAW_rsi##__LINE__)                                    \
+                         : "a"(SYS_write), "D"(fd), "d"(count)                        \
+                         : "r8", "r10", "rcx", "r11", "memory", "cc");                \
+        /* The input registers may be broken by syscall */                            \
+        __asm__ volatile("" ::: "rax", "rdi", "rdx");                                 \
     } while (0)
 #elif defined(__i386__)
-#define RAW_WRITE(fd, buf, count)                                            \
-    do {                                                                     \
-        __asm__ volatile("int $0x80;\n" ::"a"(SYS_write), "b"(fd), "c"(buf), \
-                         "d"(count)                                          \
-                         : "memory", "cc");                                  \
-        /* The input registers may be broken by syscall */                   \
-        __asm__ volatile("" ::: "eax", "ebx", "ecx", "edx");                 \
+#define RAW_WRITE(fd, buf, count)                                                                          \
+    do {                                                                                                   \
+        __asm__ volatile("int $0x80;\n" ::"a"(SYS_write), "b"(fd), "c"(buf), "d"(count) : "memory", "cc"); \
+        /* The input registers may be broken by syscall */                                                 \
+        __asm__ volatile("" ::: "eax", "ebx", "ecx", "edx");                                               \
     } while (0)
 #elif defined(__arm__)
 #define RAW_WRITE(fd, buf, count)                \
@@ -164,4 +161,3 @@
         RAW_PRINT_INT(__LINE__);                 \
         RAW_PRINT_STR("\n");                     \
     } while (0)
-

@@ -13,14 +13,14 @@ static void after_main(void) { puts("after_main"); }
 void bye(void) { printf("That was all, folks\n"); }
 
 int main() {
-    puts("Hello from libc!");
-    printf("tls_i = %d\n", tls_i);
+  puts("Hello from libc!");
+  printf("tls_i = %d\n", tls_i);
 
-    if (atexit(bye) != 0) {
-        fprintf(stderr, "cannot set exit function\n");
-        exit(EXIT_FAILURE);
-    }
+  if (atexit(bye) != 0) {
+    fprintf(stderr, "cannot set exit function\n");
+    exit(EXIT_FAILURE);
+  }
 
-    exit(EXIT_SUCCESS);
-    return 0;
+  exit(EXIT_SUCCESS);
+  return 0;
 }

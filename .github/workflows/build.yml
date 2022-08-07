@@ -1,0 +1,23 @@
+name: Build and test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install requirements
+      run: sudo apt install ninja-build
+    - name: Install Python packages
+      run: pip install cmake-format
+    - name: format
+      run: ./run-format.sh
+    - name: CMake
+      run: mkdir build && cmake -GNinja -S . -B build
+    - name: Build
+      run: cmake --build build
+    - name: Test
+      run: cd build && ctest --output-on-failure

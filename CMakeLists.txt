@@ -13,11 +13,15 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(third-party)
 get_third_party(glog)
-set(WITH_GFLAGS OFF CACHE INTERNAL "" FORCE)
+set(WITH_GFLAGS
+    OFF
+    CACHE INTERNAL "" FORCE)
 set(WITH_UNWIND OFF)
 set(BUILD_SHARED_LIBS OFF)
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/glog ${CMAKE_CURRENT_BINARY_DIR}/glog EXCLUDE_FROM_ALL)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/glog ${CMAKE_CURRENT_BINARY_DIR}/glog/src)
+add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/glog
+                 ${CMAKE_CURRENT_BINARY_DIR}/glog EXCLUDE_FROM_ALL)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/glog
+                    ${CMAKE_CURRENT_BINARY_DIR}/glog/src)
 add_definitions(-DC10_USE_GLOG=1)
 
 add_executable(sloader sloader.cc dyn_loader.cc utils.cc)

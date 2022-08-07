@@ -7,6 +7,7 @@ target_compile_options(global_variable_main PUBLIC -fno-builtin)
 target_link_libraries(global_variable_main global_variable_hoge -nostdlib)
 
 add_test(
-  NAME global_variable_test 
-  COMMAND ./sloader ./tests/global_variable/global_variable_main
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+  NAME global_variable_test
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_BINARY_DIR}/sloader
+    ${CMAKE_BINARY_DIR}/tests/global_variable/global_variable_main)

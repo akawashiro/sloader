@@ -9,4 +9,4 @@ RUN rm -rf build
 RUN mkdir build
 RUN cmake -GNinja -S . -B build
 RUN cmake --build build
-# RUN cd build && ctest --output-on-failure
+RUN cd build && ctest --output-on-failure

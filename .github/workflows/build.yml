@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install requirements
-      run: sudo apt install ninja-build
+      run: sudo apt install ninja-build nasm
     - name: Install Python packages
       run: pip install cmake-format
     - name: format

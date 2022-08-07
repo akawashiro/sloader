@@ -3,7 +3,10 @@ import sys
 
 comp = subprocess.run(sys.argv[1:], capture_output=True)
 print(comp)
+print("cmd:", " ".join(sys.argv[1:]))
 stdout = comp.stdout.decode("utf-8")
+print("stdout:")
+print(stdout)
 succeeded = "====== Before main ======" in stdout
 
 if succeeded:

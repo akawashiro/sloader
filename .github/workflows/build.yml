@@ -9,15 +9,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Install requirements
-      run: sudo apt install ninja-build nasm
-    - name: Install Python packages
-      run: pip install cmake-format
-    - name: format
-      run: ./run-format.sh
-    - name: CMake
-      run: mkdir build && cmake -GNinja -S . -B build
-    - name: Build
-      run: cmake --build build
-    - name: Test
-      run: cd build && ctest --output-on-failure
+    - name: docker build
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile

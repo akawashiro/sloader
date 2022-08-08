@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "/home/akira/sloader/raw_write.h"
+#include "raw_write.h"
 
 int main() {
     RAW_DEBUG_MESSAGE();

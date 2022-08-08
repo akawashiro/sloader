@@ -1,0 +1,16 @@
+name: Build and test
+
+on: [pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: docker build
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile

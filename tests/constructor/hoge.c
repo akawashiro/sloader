@@ -1,7 +1,9 @@
 #include "raw_write.h"
 
 void before_main() __attribute__((constructor));
-void before_main() { RAW_PRINT_STR("====== Before main ======\n"); }
+void before_main() {
+    RAW_PRINT_STR("====== Before main ======\n");
+}
 
 unsigned long hoge_var = 0xdeadbeef;
 

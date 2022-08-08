@@ -514,26 +514,28 @@ void DynLoader::Execute(std::vector<std::string> envs) {
 
     LOG(INFO) << LOG_BITS(binaries_[0].ehdr().e_entry + binaries_[0].base_addr()) << std::endl;
 
-    void* tls_block = malloc(1024 * sizeof(char));
-    memset(tls_block, 0x1, 1024);
-    for (size_t i = 0; i < 1024; i++) {
-        if (i < 512 - 20) {
-            *(reinterpret_cast<char*>(tls_block) + i) = 0xa;
-        } else if (512 - 20 <= i && i < 512 - 16) {
-            *(reinterpret_cast<char*>(tls_block) + i) = 0xb;
-        } else if (512 - 16 <= i && i < 512 - 12) {
-            *(reinterpret_cast<char*>(tls_block) + i) = 0xc;
-        } else if (512 - 12 <= i && i < 512 - 8) {
-            *(reinterpret_cast<char*>(tls_block) + i) = 0xd;
-        } else if (512 - 8 <= i && i < 512 - 4) {
-            *(reinterpret_cast<char*>(tls_block) + i) = 0xe;
-        } else if (512 - 4 <= i && i < 512) {
-            *(reinterpret_cast<char*>(tls_block) + i) = 0xff;
-        }
+    static constexpr size_t tls_block_size = 4096;
+    void* tls_block = malloc(tls_block_size * sizeof(char));
+    memset(tls_block, 0x1, tls_block_size);
+    for (size_t i = 0; i < tls_block_size; i++) {
+        // if (i < tls_block_size / 2 - 20) {
+        //     *(reinterpret_cast<char*>(tls_block) + i) = 0xa;
+        // } else if (tls_block_size / 2 - 20 <= i && i < tls_block_size / 2 - 16) {
+        //     *(reinterpret_cast<char*>(tls_block) + i) = 0xb;
+        // } else if (tls_block_size / 2 - 16 <= i && i < tls_block_size / 2 - 12) {
+        //     *(reinterpret_cast<char*>(tls_block) + i) = 0xc;
+        // } else if (tls_block_size / 2 - 12 <= i && i < tls_block_size / 2 - 8) {
+        //     *(reinterpret_cast<char*>(tls_block) + i) = 0xd;
+        // } else if (tls_block_size / 2 - 8 <= i && i < tls_block_size / 2 - 4) {
+        //     *(reinterpret_cast<char*>(tls_block) + i) = 0xe;
+        // } else if (tls_block_size / 2 - 4 <= i && i < tls_block_size / 2) {
+        //     *(reinterpret_cast<char*>(tls_block) + i) = 0xff;
+        // }
+        *(reinterpret_cast<char*>(tls_block) + i) = 0xff & i;
     }
 
     LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block))
-              << LOG_BITS(reinterpret_cast<uint64_t>(reinterpret_cast<char*>(tls_block) + 512));
+              << LOG_BITS(reinterpret_cast<uint64_t>(reinterpret_cast<char*>(tls_block) + tls_block_size / 2));
     // Ad-hoc TLS initialization
     for (size_t i = 0; i < binaries_.size(); i++) {
         if (binaries_[i].has_tls()) {
@@ -543,18 +545,19 @@ void DynLoader::Execute(std::vector<std::string> envs) {
                       << LOG_KEY(TLSOffset(i)) << LOG_KEY(binaries_[i].file_tls().p_memsz);
 
             // Copy initial values
-            memcpy(reinterpret_cast<char*>(tls_block) + 512 - binaries_[i].file_tls().p_memsz - TLSOffset(i),
+            memcpy(reinterpret_cast<char*>(tls_block) + tls_block_size / 2 - binaries_[i].file_tls().p_memsz - TLSOffset(i),
                    reinterpret_cast<const void*>(binaries_[i].base_addr() + binaries_[i].file_tls().p_vaddr),
                    binaries_[i].file_tls().p_memsz);
 
             // Clear .tbss section
-            memset(reinterpret_cast<char*>(tls_block) + 512 - (binaries_[i].file_tls().p_memsz - binaries_[i].file_tls().p_filesz) -
-                       TLSOffset(i),
+            memset(reinterpret_cast<char*>(tls_block) + tls_block_size / 2 -
+                       (binaries_[i].file_tls().p_memsz - binaries_[i].file_tls().p_filesz) - TLSOffset(i),
                    0x0, binaries_[i].file_tls().p_memsz - binaries_[i].file_tls().p_filesz);
         }
     }
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + 512) = reinterpret_cast<char*>(tls_block) + 512;
-    syscall(SYS_arch_prctl, ARCH_SET_FS, reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + 512));
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + tls_block_size / 2) =
+        reinterpret_cast<char*>(tls_block) + tls_block_size / 2;
+    syscall(SYS_arch_prctl, ARCH_SET_FS, reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + tls_block_size / 2));
 
     ExecuteCore(stack, stack_num, binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
 

@@ -5,6 +5,7 @@ add_executable(initial_exec main.c)
 target_link_libraries(initial_exec initial_exec_hoge)
 
 add_test(
-  NAME tls
-  COMMAND ./sloader ./tests/initial_exec/initial_exec
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+  NAME initial_exec
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_BINARY_DIR}/sloader
+    ${CMAKE_BINARY_DIR}/tests/initial_exec/initial_exec)

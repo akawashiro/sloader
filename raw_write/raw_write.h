@@ -161,3 +161,16 @@
         RAW_PRINT_INT(__LINE__);                 \
         RAW_PRINT_STR("\n");                     \
     } while (0)
+
+#define RAW_DEBUG_PTR_MESSAGE(ptr)               \
+    do {                                         \
+        RAW_PRINT_STR("sloader debug message "); \
+        RAW_PRINT_STR(__FILE__);                 \
+        RAW_PRINT_STR(":");                      \
+        RAW_PRINT_INT(__LINE__);                 \
+        RAW_PRINT_STR(" ");                      \
+        RAW_PRINT_STR(#ptr);                     \
+        RAW_PRINT_STR(":");                      \
+        RAW_PRINT_PTR(ptr);                      \
+        RAW_PRINT_STR("\n");                     \
+    } while (0)

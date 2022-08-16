@@ -7,7 +7,14 @@ extern __thread uint32_t i0;
 extern __thread uint32_t i1;
 extern __thread uint32_t i2;
 extern __thread uint32_t i3;
-extern uint32_t j;
+extern __thread uint64_t i4;
+extern __thread uint64_t i5;
+extern uint32_t j0;
+extern uint32_t j1;
+extern uint32_t j2;
+extern uint32_t j3;
+extern uint64_t j4;
+extern uint64_t j5;
 
 void set_i0() {
     i0 = 0xaabbccdd;
@@ -38,14 +45,24 @@ int main() {
     RAW_PRINT_HEX(&i3);
     RAW_PRINT_STR("\n");
 
+    RAW_DEBUG_PTR_MESSAGE(&i4);
+    RAW_DEBUG_PTR_MESSAGE(&i5);
+
+    RAW_DEBUG_PTR_MESSAGE(&j0);
+    RAW_DEBUG_PTR_MESSAGE(&j1);
+    RAW_DEBUG_PTR_MESSAGE(&j2);
+    RAW_DEBUG_PTR_MESSAGE(&j3);
+    RAW_DEBUG_PTR_MESSAGE(&j4);
+    RAW_DEBUG_PTR_MESSAGE(&j5);
+
     // RAW_BREAK();
     i0 = 0xeeeeeeee;
     i1 = 0xffffffff;
 
-    RAW_PRINT_STR("\nShould be 0xaabbccdd: uint32_t j=");
-    RAW_PRINT_HEX(j);
-    RAW_PRINT_STR("\n&j=");
-    RAW_PRINT_HEX(&j);
-    RAW_PRINT_STR("\n");
+    // RAW_PRINT_STR("\nShould be 0xaabbccdd: uint32_t j=");
+    // RAW_PRINT_HEX(j);
+    // RAW_PRINT_STR("\n&j=");
+    // RAW_PRINT_HEX(&j);
+    // RAW_PRINT_STR("\n");
     return 0;
 }

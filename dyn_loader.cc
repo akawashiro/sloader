@@ -630,7 +630,9 @@ Elf64_Addr DynLoader::TLSOffset(const size_t bin_index) {
 }
 
 void DynLoader::Relocate() {
+    size_t cur_bin_index = -1;
     for (const auto& bin : binaries_) {
+        cur_bin_index++;
         LOG(INFO) << bin.path();
 
         std::vector<Elf64_Rela> relas = bin.pltrelas();
@@ -684,7 +686,9 @@ void DynLoader::Relocate() {
                 case R_X86_64_IRELATIVE:
                 case R_X86_64_RELATIVE: {
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(bin.base_addr() + r.r_offset);
-                    *reloc_addr = reinterpret_cast<Elf64_Addr>(bin.base_addr() + r.r_addend);
+                    Elf64_Addr val = reinterpret_cast<Elf64_Addr>(bin.base_addr() + r.r_addend);
+                    *reloc_addr = val;
+                    LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(reloc_addr)) << LOG_BITS(val);
                     break;
                 }
                 case R_X86_64_64: {
@@ -702,20 +706,26 @@ void DynLoader::Relocate() {
                 }
                 case R_X86_64_TPOFF64: {
                     const auto opt = SearchSym(name);
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(bin.base_addr() + r.r_offset);
                     if (!opt) {
                         // TODO
-                        LOG(WARNING) << "Cannot find " << LOG_KEY(name) << LOG_KEY(bin.path());
+                        Elf64_Addr offset = -(TLSOffset(cur_bin_index) + binaries_[cur_bin_index].file_tls().p_memsz -
+                                              r.r_addend);
+                        LOG(WARNING) << "Cannot find " << LOG_KEY(name) << LOG_KEY(bin.path())
+                                     << LOG_BITS(reinterpret_cast<uint64_t>(reloc_addr)) << LOG_BITS(offset);
+                        *reloc_addr = offset;
+
+                        break;
+                    } else {
+                        const auto [bin_index, sym_index] = opt.value();
+                        LOG(INFO) << LOG_KEY(bin_index) << LOG_KEY(binaries_[bin_index].filename()) << LOG_KEY(sym_index) << LOG_KEY(name);
+                        CHECK(binaries_[bin_index].has_tls());
+                        Elf64_Addr offset = -(TLSOffset(bin_index) + binaries_[bin_index].file_tls().p_memsz -
+                                              binaries_[bin_index].TLSVariableOffset(name));
+                        *reloc_addr = offset;
+
                         break;
                     }
-                    const auto [bin_index, sym_index] = opt.value();
-                    LOG(INFO) << LOG_KEY(bin_index) << LOG_KEY(binaries_[bin_index].filename()) << LOG_KEY(sym_index) << LOG_KEY(name);
-                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(bin.base_addr() + r.r_offset);
-                    CHECK(binaries_[bin_index].has_tls());
-                    Elf64_Addr offset =
-                        -(TLSOffset(bin_index) + binaries_[bin_index].file_tls().p_memsz - binaries_[bin_index].TLSVariableOffset(name));
-                    *reloc_addr = offset;
-
-                    break;
                 }
                 case R_X86_64_DTPMOD64: {
                     // TODO: Must be wrong

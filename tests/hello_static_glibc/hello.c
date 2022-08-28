@@ -21,6 +21,7 @@ void bye(void) {
 int main() {
     puts("Hello from libc!");
     printf("tls_i = %d\n", tls_i);
+    fflush(stdout);
 
     if (atexit(bye) != 0) {
         fprintf(stderr, "cannot set exit function\n");

@@ -19,6 +19,8 @@ add_subdirectory(find_a_depending_so)
 
 add_subdirectory(hello_glibc)
 
+add_subdirectory(hello_static_glibc)
+
 add_subdirectory(global_variable)
 
 add_subdirectory(static_struct)

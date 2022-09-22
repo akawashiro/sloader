@@ -31,6 +31,8 @@ add_subdirectory(local_exec)
 
 add_subdirectory(initial_exec)
 
+add_subdirectory(ls)
+
 if(CUSTOM_LIBC_PATH)
   add_custom_target(
     hello_static_custom_libc ALL

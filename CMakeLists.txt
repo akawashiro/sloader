@@ -26,7 +26,7 @@ add_definitions(-DC10_USE_GLOG=1)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/raw_write)
 
-add_executable(sloader sloader.cc dyn_loader.cc utils.cc)
+add_executable(sloader sloader.cc dyn_loader.cc libc_mapping.cc utils.cc)
 target_link_libraries(sloader glog)
 target_compile_options(sloader PUBLIC -Wall -Werror)
 target_link_options(sloader PUBLIC -static -T

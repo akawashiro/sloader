@@ -2,3 +2,4 @@ glibc/*
 glibc-install/*
 glibc-build/*
 build/*
+.cache/*

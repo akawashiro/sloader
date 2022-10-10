@@ -16,3 +16,6 @@ ctest -V
 ./build_glibc.sh
 SLOADER_LIBRARY_PATH=/home/akira/sloader/glibc-install/lib ./build/sloader ./build/tests/hello_glibc/hello_glibc
 ```
+
+## TODO
+- arguments

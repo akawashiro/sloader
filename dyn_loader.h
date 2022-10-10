@@ -96,4 +96,4 @@ class DynLoader {
 };
 
 std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path,
-                                         const std::vector<std::string>& envs);
+                                         const std::vector<std::string>& envs, const std::vector<std::string>& argv);

@@ -1,10 +1,5 @@
 #include "libc_mapping.h"
 
-#include <sys/uio.h>
-#include <regex.h>
-#include <glob.h>
-#include <iconv.h>
-#include <math.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <asm/prctl.h>
@@ -17,16 +12,20 @@
 #include <fcntl.h>
 #include <fnmatch.h>
 #include <getopt.h>
+#include <glob.h>
 #include <grp.h>
+#include <iconv.h>
 #include <ifaddrs.h>
 #include <langinfo.h>
 #include <libintl.h>
+#include <math.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
 #include <pwd.h>
+#include <regex.h>
 #include <resolv.h>
 #include <sched.h>
 #include <setjmp.h>
@@ -48,6 +47,7 @@
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/uio.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <sys/xattr.h>
@@ -119,7 +119,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"__memset_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__overflow", reinterpret_cast<Elf64_Addr>(&__overflow)},
     {"__poll_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__printf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"__printf_chk", reinterpret_cast<Elf64_Addr>(&__printf_chk)},
     {"__progname", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__progname_full", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__rawmemchr", reinterpret_cast<Elf64_Addr>(nullptr)},

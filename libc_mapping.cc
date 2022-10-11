@@ -70,7 +70,7 @@ double (*frexp_c)(double, int*) = frexp;
 double (*ldexp_c)(double, int) = ldexp;
 const char* (*strchrnul_c)(const char*, int) = strchrnul;
 
-void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char* argv, void (*init)(void), void (*fini)(void),
+void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char** argv, void (*init)(void), void (*fini)(void),
                              void (*rtld_fini)(void), void* stack_end) {
     // Although glibc write this function in assembly, we can use a plain C function?
     // https://github.com/akawashiro/glibc/blob/0005e54f762b2ec65cee2c4ecf1e9d42612030f0/sysdeps/x86_64/start.S#L64-L76
@@ -78,7 +78,7 @@ void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char* a
     // After SYS_arch_prctl, we cannot use glog.
     // LOG(INFO) << LOG_BITS(main);
     // We need __libc_stack_end
-    exit(main(argc, &argv, NULL));
+    exit(main(argc, argv, NULL));
 }
 
 std::map<std::string, Elf64_Addr> sloader_libc_map = {

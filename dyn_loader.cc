@@ -251,7 +251,8 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
     return symtabs()[symbol_index].st_value + base_addr();
 }
 
-DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs) : main_path_(main_path), envs_(envs) {
+DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs)
+    : main_path_(main_path), args_(args), envs_(envs) {
     Elf64_Addr base_addr = 0x40'0000;
     binaries_.emplace_back(ELFBinary(main_path));
 
@@ -291,7 +292,7 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
 
     Relocate();
 
-    Execute(envs_);
+    Execute(args_, envs_);
 }
 
 // To assign variables of stack, stack_num and entry to %rdi, %rsi and %rdx
@@ -311,7 +312,7 @@ void __attribute__((noinline)) DynLoader::ExecuteCore(uint64_t* stack, size_t st
 // argc, argv, env
 typedef void (*dl_init_t)(int, char**, char**);
 
-void DynLoader::Execute(std::vector<std::string> envs) {
+void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> envs) {
     // TODO: Pass arguments
     char* argv[] = {const_cast<char*>(main_path_.c_str())};
     char** env = reinterpret_cast<char**>(malloc(sizeof(const char*) * envs.size()));
@@ -387,7 +388,7 @@ void DynLoader::Execute(std::vector<std::string> envs) {
     // argv[0] = filename
     // argc
     size_t stack_index = 0;
-    size_t stack_num = 4 + 2 + 2 * aux_tvs.size() + 1 + envs.size() + 3;
+    size_t stack_num = 4 + 2 + 2 * aux_tvs.size() + 1 + envs.size() + 2 + args.size();
     size_t stack_size = sizeof(uint64_t) * stack_num;
     unsigned long* stack = reinterpret_cast<uint64_t*>(malloc(stack_size));
     memset(stack, 0, stack_size);
@@ -411,19 +412,21 @@ void DynLoader::Execute(std::vector<std::string> envs) {
 
     // Environment variables
     for (size_t i = 0; i < envs.size(); i++) {
-        *(stack + stack_index) = reinterpret_cast<uint64_t>(envs[i].c_str());
+        *(stack + stack_index) = reinterpret_cast<uint64_t>(envs[envs.size() - 1 - i].c_str());
         stack_index++;
     }
 
     // argv[argc]
     stack_index++;
 
-    // argv[0]
-    *(stack + stack_index) = reinterpret_cast<uint64_t>(binaries_[0].filename().c_str());
-    stack_index++;
+    for (size_t i = 0; i < args.size(); i++) {
+        LOG(INFO) << (args[i]);
+        *(stack + stack_index) = reinterpret_cast<uint64_t>(args[args.size() - 1 - i].c_str());
+        stack_index++;
+    }
 
     // argc
-    *(stack + stack_index) = 1;
+    *(stack + stack_index) = args.size();
     stack_index++;
 
     CHECK_EQ(stack_index, stack_num);
@@ -629,5 +632,5 @@ void DynLoader::Relocate() {
 
 std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
                                          const std::vector<std::string>& args) {
-    return std::make_unique<DynLoader>(main_path, envs);
+    return std::make_unique<DynLoader>(main_path, args, envs);
 }

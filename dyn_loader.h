@@ -13,7 +13,7 @@
 #include "utils.h"
 
 class ELFBinary {
-   public:
+public:
     ELFBinary(const std::filesystem::path path);
     void Load(Elf64_Addr base_addr, std::ofstream& map_file);
     void ParseDynamic();
@@ -39,7 +39,7 @@ class ELFBinary {
     const char* strtab() const { return strtab_; }
     const Elf64_Ehdr ehdr() const { return ehdr_; }
 
-   private:
+private:
     const std::filesystem::path path_;
     char* file_base_addr_;
     Elf64_Addr base_addr_ = 0;
@@ -76,24 +76,21 @@ class ELFBinary {
 };
 
 class DynLoader {
-   public:
-    DynLoader(const std::filesystem::path& main_path,
-              const std::vector<std::string>& envs);
-    void Execute(std::vector<std::string> envs);
+public:
+    DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs);
+    void Execute(std::vector<std::string> args, std::vector<std::string> envs);
 
-   private:
-    void __attribute__((noinline))
-    ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry);
-    std::filesystem::path FindLibrary(
-        std::string library_name, std::optional<std::filesystem::path> runpath,
-        std::optional<std::filesystem::path> rpath);
+private:
+    void __attribute__((noinline)) ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry);
+    std::filesystem::path FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
+                                      std::optional<std::filesystem::path> rpath);
     std::filesystem::path main_path_;
+    const std::vector<std::string> args_;
     const std::vector<std::string> envs_;
     std::vector<ELFBinary> binaries_;
     void Relocate();
-    std::optional<std::pair<size_t, size_t>> SearchSym(const std::string& name,
-                                                       bool skip_main);
+    std::optional<std::pair<size_t, size_t>> SearchSym(const std::string& name, bool skip_main);
 };
 
-std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path,
-                                         const std::vector<std::string>& envs, const std::vector<std::string>& argv);
+std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
+                                         const std::vector<std::string>& argv);

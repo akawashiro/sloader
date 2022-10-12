@@ -559,7 +559,7 @@ void DynLoader::Relocate() {
                         const auto [bin_index, sym_index] = opt.value();
                         sym_addr = binaries_[bin_index].GetSymbolAddr(sym_index);
                     } else {
-                        LOG(WARNING) << "Cannot find " << name;
+                        LOG(FATAL) << "Cannot find " << name;
                         break;
                     }
 
@@ -583,7 +583,7 @@ void DynLoader::Relocate() {
                     const auto opt = SearchSym(name);
                     if (!opt) {
                         // TODO
-                        LOG(WARNING) << "Cannot find " << name;
+                        LOG(FATAL) << "Cannot find " << name;
                         break;
                     }
                     const auto [bin_index, sym_index] = opt.value();
@@ -619,7 +619,7 @@ void DynLoader::Relocate() {
                         src = reinterpret_cast<void*>(binaries_[bin_index].base_addr() + sym.st_value);
                         size = sym.st_size;
                     } else {
-                        LOG(WARNING) << "Cannot find " << name;
+                        LOG(FATAL) << "Cannot find " << name;
                         break;
                     }
                     void* dest = reinterpret_cast<void*>(bin.base_addr() + r.r_offset);

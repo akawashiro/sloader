@@ -607,16 +607,24 @@ void DynLoader::Relocate() {
                 }
                 case R_X86_64_COPY: {
                     const auto opt = SearchSym(name, true);
-                    if (!opt) {
+                    void* src;
+                    Elf64_Xword size;
+
+                    if (libc_mapping::sloader_libc_map.find(name) != libc_mapping::sloader_libc_map.end()) {
+                        src = reinterpret_cast<void*>(libc_mapping::sloader_libc_map[name]);
+                        size = 8;
+                    } else if (opt) {
+                        const auto [bin_index, sym_index] = opt.value();
+                        Elf64_Sym sym = binaries_[bin_index].symtabs()[sym_index];
+                        src = reinterpret_cast<void*>(binaries_[bin_index].base_addr() + sym.st_value);
+                        size = sym.st_size;
+                    } else {
                         LOG(WARNING) << "Cannot find " << name;
                         break;
                     }
-                    const auto [bin_index, sym_index] = opt.value();
-                    Elf64_Sym sym = binaries_[bin_index].symtabs()[sym_index];
-                    const void* src = reinterpret_cast<const void*>(binaries_[bin_index].base_addr() + sym.st_value);
                     void* dest = reinterpret_cast<void*>(bin.base_addr() + r.r_offset);
-                    LOG(INFO) << LOG_BITS(src) << LOG_BITS(dest) << LOG_BITS(*reinterpret_cast<const unsigned long*>(src));
-                    std::memcpy(dest, src, sym.st_size);
+                    LOG(INFO) << LOG_BITS(src) << LOG_BITS(dest) << LOG_BITS(*reinterpret_cast<const unsigned long*>(src)) << LOG_BITS(size);
+                    std::memcpy(dest, src, size);
                     // std::abort();
                     break;
                 }

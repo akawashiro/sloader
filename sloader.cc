@@ -56,7 +56,7 @@ int main(int argc, char* const argv[], char** envp) {
     }
 
     LOG(INFO) << LOG_KEY(fullpath);
-    CHECK(std::filesystem::exists(fullpath));
+    CHECK(std::filesystem::exists(fullpath)) << fullpath;
 
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {

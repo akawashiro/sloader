@@ -1,6 +1,11 @@
 #include "libc_mapping.h"
 
 #include <string.h>
+#include <sys/mount.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fts.h>
+#include <sys/epoll.h>
 #include <libgen.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
@@ -87,9 +92,16 @@ void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char** 
 }
 
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
-    // {"__memcpy_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__memmove_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__memset_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"__memcpy_chk", reinterpret_cast<Elf64_Addr>(&memcpy)},
+    {"__memmove_chk", reinterpret_cast<Elf64_Addr>(&memmove)},
+    {"__memset_chk", reinterpret_cast<Elf64_Addr>(&memset)},
+    {"gettid", reinterpret_cast<Elf64_Addr>(&gettid)},
+    {"fts_set", reinterpret_cast<Elf64_Addr>(&fts_set)},
+    {"fts_close", reinterpret_cast<Elf64_Addr>(&fts_close)},
+    {"fts_read", reinterpret_cast<Elf64_Addr>(&fts_read)},
+    {"__realpath_chk", reinterpret_cast<Elf64_Addr>(&__realpath_chk)},
+    {"posix_fadvise", reinterpret_cast<Elf64_Addr>(&posix_fadvise)},
+    {"getpagesize", reinterpret_cast<Elf64_Addr>(&getpagesize)},
     // {"__progname", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__progname_full", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__rawmemchr", reinterpret_cast<Elf64_Addr>(nullptr)},
@@ -104,16 +116,19 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     // {"__resolv_context_put", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__strcpy_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__strncat_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__strncpy_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__syslog_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__syslog_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__tls_get_addr", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__vasprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__vfprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__vsnprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__vsnprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__vsnprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"_setjmp", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"_setjmp", reinterpret_cast<Elf64_Addr>(&_setjmp)},
+    {"mount", reinterpret_cast<Elf64_Addr>(&mount)},
+    {"umount", reinterpret_cast<Elf64_Addr>(&umount)},
+    {"umount2", reinterpret_cast<Elf64_Addr>(&umount2)},
+    {"__open_2", reinterpret_cast<Elf64_Addr>(&__open_2)},
+    {"lgetxattr", reinterpret_cast<Elf64_Addr>(&lgetxattr)},
+    {"__strncpy_chk", reinterpret_cast<Elf64_Addr>(&strncpy)},
+    {"__vsnprintf_chk", reinterpret_cast<Elf64_Addr>(&__vsnprintf_chk)},
     {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"ZSTD_trace_compress_end", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"ZSTD_trace_decompress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
@@ -122,6 +137,15 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"_ITM_registerTMCloneTable", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__asprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__assert_fail", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"lchown", reinterpret_cast<Elf64_Addr>(&lchown)},
+    {"isalpha", reinterpret_cast<Elf64_Addr>(&isalpha)},
+    {"readv", reinterpret_cast<Elf64_Addr>(&readv)},
+    {"wcrtomb", reinterpret_cast<Elf64_Addr>(&wcrtomb)},
+    {"symlink", reinterpret_cast<Elf64_Addr>(&symlink)},
+    {"wcscmp", reinterpret_cast<Elf64_Addr>(&wcscmp)},
+    {"epoll_ctl", reinterpret_cast<Elf64_Addr>(&epoll_ctl)},
+    {"scandir", reinterpret_cast<Elf64_Addr>(&scandir)},
+    {"pclose", reinterpret_cast<Elf64_Addr>(&pclose)},
     {"__ctype_b_loc", reinterpret_cast<Elf64_Addr>(&__ctype_b_loc)},
     {"__ctype_get_mb_cur_max", reinterpret_cast<Elf64_Addr>(&__ctype_get_mb_cur_max)},
     {"__ctype_tolower_loc", reinterpret_cast<Elf64_Addr>(&__ctype_tolower_loc)},

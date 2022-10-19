@@ -35,6 +35,8 @@ add_subdirectory(ls)
 
 add_subdirectory(print_args)
 
+add_subdirectory(coreutils)
+
 if(CUSTOM_LIBC_PATH)
   add_custom_target(
     hello_static_custom_libc ALL

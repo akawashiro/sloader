@@ -559,7 +559,7 @@ void DynLoader::Relocate() {
                         const auto [bin_index, sym_index] = opt.value();
                         sym_addr = binaries_[bin_index].GetSymbolAddr(sym_index);
                     } else {
-                        LOG(FATAL) << "Cannot find " << name;
+                        LOG(FATAL) << "Cannot find " << name << LOG_KEY(bin.path());
                         break;
                     }
 

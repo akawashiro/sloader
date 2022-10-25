@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-add_custom_target(
-  hello_asm ALL
+add_custom_target( hello_asm ALL
   COMMAND nasm -f elf64 ${CMAKE_CURRENT_SOURCE_DIR}/hello.asm -o
           ${CMAKE_CURRENT_BINARY_DIR}/hello.o && ld -s -o hello_asm hello.o
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -35,7 +34,21 @@ add_subdirectory(ls)
 
 add_subdirectory(print_args)
 
-add_subdirectory(coreutils)
+# GNU Bintuils tests
+add_test(
+  NAME binutils_cat
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader /bin/cat ${CMAKE_CURRENT_SOURCE_DIR}/../compare_stdout.py)
+
+add_test(
+  NAME binutils_objdump
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader /bin/objdump -d ${CMAKE_BINARY_DIR}/sloader)
+
+add_test(
+  NAME binutils_readelf
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader /bin/readelf -a ${CMAKE_BINARY_DIR}/sloader)
 
 if(CUSTOM_LIBC_PATH)
   add_custom_target(

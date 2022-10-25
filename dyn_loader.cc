@@ -527,6 +527,16 @@ std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(const std::string&
             }
         }
     }
+    for (size_t i = skip_main ? 1 : 0; i < binaries_.size(); i++) {
+        for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
+            Elf64_Sym s = binaries_[i].symtabs()[j];
+            std::string n = s.st_name + binaries_[i].strtab();
+            if (n == name && s.st_shndx == SHN_UNDEF && ELF64_ST_BIND(s.st_info) == STB_WEAK) {
+                LOG(WARNING) << "Found " << name << " at index as an weak symbol " << j << " of " << binaries_[i].path();
+                return std::make_optional(std::make_pair(i, j));
+            }
+        }
+    }
     return std::nullopt;
 }
 

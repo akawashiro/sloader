@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
-add_custom_target( hello_asm ALL
+add_custom_target(
+  hello_asm ALL
   COMMAND nasm -f elf64 ${CMAKE_CURRENT_SOURCE_DIR}/hello.asm -o
           ${CMAKE_CURRENT_BINARY_DIR}/hello.o && ld -s -o hello_asm hello.o
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -34,21 +35,133 @@ add_subdirectory(ls)
 
 add_subdirectory(print_args)
 
-# GNU Bintuils tests
+# GNU Coreutils tests
 add_test(
-  NAME binutils_cat
+  NAME coreutils_cat
   COMMAND
-    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader /bin/cat ${CMAKE_CURRENT_SOURCE_DIR}/../compare_stdout.py)
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/cat
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
 
+add_test(
+  NAME coreutils_cksum
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/cksum
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(
+  NAME coreutils_sha1sum
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/sha1sum
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(
+  NAME coreutils_md5sum
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/md5sum
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(
+  NAME coreutils_od
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+          ${CMAKE_BINARY_DIR}/sloader /bin/od ${CMAKE_BINARY_DIR}/sloader)
+
+add_test(
+  NAME coreutils_head
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/head
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(
+  NAME coreutils_sort
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/sort
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(
+  NAME coreutils_uniq
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/uniq
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(
+  NAME coreutils_wc
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/wc
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(NAME coreutils_date
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /bin/date)
+
+add_test(NAME coreutils_who
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /bin/who)
+
+add_test(
+  NAME coreutils_stat
+  COMMAND
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/stat
+    ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py)
+
+add_test(NAME coreutils_hostid
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /bin/hostid)
+
+add_test(NAME coreutils_printenv
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /bin/printenv)
+
+add_test(NAME coreutils_id
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /bin/id)
+
+add_test(NAME coreutils_logname
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /bin/logname)
+
+add_test(NAME coreutils_uname
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /bin/uname -a)
+
+# GNU Bintuils tests
 add_test(
   NAME binutils_objdump
   COMMAND
-    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader /bin/objdump -d ${CMAKE_BINARY_DIR}/sloader)
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/objdump -d ${CMAKE_BINARY_DIR}/sloader)
 
 add_test(
   NAME binutils_readelf
   COMMAND
-    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader /bin/readelf -a ${CMAKE_BINARY_DIR}/sloader)
+    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader /bin/readelf -a ${CMAKE_BINARY_DIR}/sloader)
+
+set_tests_properties(
+  coreutils_cksum
+  coreutils_sha1sum
+  coreutils_md5sum
+  coreutils_od
+  coreutils_head
+  coreutils_sort
+  coreutils_uniq
+  coreutils_wc
+  coreutils_date
+  coreutils_who
+  coreutils_stat
+  coreutils_hostid
+  coreutils_id
+  coreutils_logname
+  coreutils_uname
+  PROPERTIES WILL_FAIL TRUE)
 
 if(CUSTOM_LIBC_PATH)
   add_custom_target(

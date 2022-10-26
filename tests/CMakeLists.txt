@@ -146,21 +146,9 @@ add_test(
     ${CMAKE_BINARY_DIR}/sloader /bin/readelf -a ${CMAKE_BINARY_DIR}/sloader)
 
 set_tests_properties(
-  coreutils_cksum
-  coreutils_sha1sum
-  coreutils_md5sum
-  coreutils_od
-  coreutils_head
-  coreutils_sort
-  coreutils_uniq
-  coreutils_wc
-  coreutils_date
-  coreutils_who
   coreutils_stat
   coreutils_hostid
   coreutils_id
-  coreutils_logname
-  coreutils_uname
   PROPERTIES WILL_FAIL TRUE)
 
 if(CUSTOM_LIBC_PATH)

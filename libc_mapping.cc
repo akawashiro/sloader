@@ -1,16 +1,5 @@
 #include "libc_mapping.h"
 
-#include <wctype.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <setjmp.h>
-#include <string.h>
-#include <sys/mount.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fts.h>
-#include <sys/epoll.h>
-#include <libgen.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <asm/prctl.h>
@@ -22,12 +11,14 @@
 #include <error.h>
 #include <fcntl.h>
 #include <fnmatch.h>
+#include <fts.h>
 #include <getopt.h>
 #include <glob.h>
 #include <grp.h>
 #include <iconv.h>
 #include <ifaddrs.h>
 #include <langinfo.h>
+#include <libgen.h>
 #include <libintl.h>
 #include <math.h>
 #include <net/if.h>
@@ -45,16 +36,21 @@
 #include <stdio.h>
 #include <stdio_ext.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/auxv.h>
 #include <sys/capability.h>
+#include <sys/epoll.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/mount.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/shm.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/sysinfo.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -65,6 +61,9 @@
 #include <termios.h>
 #include <ucontext.h>
 #include <unistd.h>
+#include <utmp.h>
+#include <utmpx.h>
+#include <wctype.h>
 #include <cinttypes>
 #include <cstring>
 #include <ctime>
@@ -80,7 +79,7 @@ double (*frexp_c)(double, int*) = frexp;
 double (*ldexp_c)(double, int) = ldexp;
 const char* (*strchrnul_c)(const char*, int) = strchrnul;
 
-void sloader_dummy_fun(){
+void sloader_dummy_fun() {
     ;
 }
 
@@ -113,6 +112,27 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     // {"__syslog_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__tls_get_addr", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__vfprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"lseek", reinterpret_cast<Elf64_Addr>(&lseek)},
+    {"getlogin", reinterpret_cast<Elf64_Addr>(&getlogin)},
+    {"utmpxname", reinterpret_cast<Elf64_Addr>(&utmpxname)},
+    {"endutxent", reinterpret_cast<Elf64_Addr>(&endutxent)},
+    {"setutxent", reinterpret_cast<Elf64_Addr>(&setutxent)},
+    {"ttyname", reinterpret_cast<Elf64_Addr>(&ttyname)},
+    {"getutxent", reinterpret_cast<Elf64_Addr>(&getutxent)},
+    {"__uflow", reinterpret_cast<Elf64_Addr>(&__uflow)},
+    {"freopen", reinterpret_cast<Elf64_Addr>(&freopen)},
+    {"clearerr_unlocked", reinterpret_cast<Elf64_Addr>(&clearerr_unlocked)},
+    {"nanosleep", reinterpret_cast<Elf64_Addr>(&nanosleep)},
+    {"ftruncate", reinterpret_cast<Elf64_Addr>(&ftruncate)},
+    {"mkostemp", reinterpret_cast<Elf64_Addr>(&mkostemp)},
+    {"fgetc", reinterpret_cast<Elf64_Addr>(&fgetc)},
+    {"__stpcpy_chk", reinterpret_cast<Elf64_Addr>(&stpcpy)},
+    {"pause", reinterpret_cast<Elf64_Addr>(&pause)},
+    {"pthread_sigmask", reinterpret_cast<Elf64_Addr>(&pthread_sigmask)},
+    {"euidaccess", reinterpret_cast<Elf64_Addr>(&euidaccess)},
+    {"sysinfo", reinterpret_cast<Elf64_Addr>(&sysinfo)},
+    {"getppid", reinterpret_cast<Elf64_Addr>(&getppid)},
+    {"execlp", reinterpret_cast<Elf64_Addr>(&execlp)},
     {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"ZSTD_trace_compress_end", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"ZSTD_trace_decompress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
@@ -144,6 +164,9 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"__libc_single_threaded", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__libc_start_main", reinterpret_cast<Elf64_Addr>(&sloader_libc_start_main)},
     {"__longjmp_chk", reinterpret_cast<Elf64_Addr>(&longjmp)},
+    {"fread_unlocked", reinterpret_cast<Elf64_Addr>(&fread_unlocked)},
+    {"opterr", reinterpret_cast<Elf64_Addr>(&opterr)},
+    {"__getdelim", reinterpret_cast<Elf64_Addr>(&__getdelim)},
     {"__mbstowcs_chk", reinterpret_cast<Elf64_Addr>(&__mbstowcs_chk)},
     {"__memcpy_chk", reinterpret_cast<Elf64_Addr>(&memcpy)},
     {"__memmove_chk", reinterpret_cast<Elf64_Addr>(&memmove)},

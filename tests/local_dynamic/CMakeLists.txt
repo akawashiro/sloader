@@ -9,3 +9,7 @@ add_test(
   COMMAND
     python3 ${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_BINARY_DIR}/sloader
     ${CMAKE_BINARY_DIR}/tests/local_dynamic/local_dynamic)
+
+set_tests_properties(
+  local_dynamic
+  PROPERTIES WILL_FAIL TRUE)

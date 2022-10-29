@@ -433,23 +433,26 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
 
     LOG(INFO) << LOG_BITS(binaries_[0].ehdr().e_entry + binaries_[0].base_addr()) << std::endl;
 
-    // Ad-hoc TLS initialization
+    // TLS initialization
+    // TODO: We support only static TLS i.e. don't support dlopen.
+    //
+    // =========== address ==========>
+    //
+    // tls_block                                                                  tls_block + TLS_BLOCK_SIZE
+    // |                                                                                                   |
+    // v                                                                                                   v
+    // [.tdata of binaries_[n]] [.tbss of binaries_[n]] ... [.tdata of binaries_[0]] [.tbss of binaries_[0]]
+
+    constexpr size_t TLS_BLOCK_SIZE = 1024;
+    constexpr size_t TLS_BLOCK_SIZE_EXTRA_SPACE = 512;
     if (binaries_[0].has_tls()) {
-        void* tls_block = malloc(1024 * sizeof(char));
-        memset(tls_block, 0x1, 1024);
-        for (size_t i = 0; i < 1024; i++) {
-            if (i < 512 - 20) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xa;
-            } else if (512 - 20 <= i && i < 512 - 16) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xb;
-            } else if (512 - 16 <= i && i < 512 - 12) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xc;
-            } else if (512 - 12 <= i && i < 512 - 8) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xd;
-            } else if (512 - 8 <= i && i < 512 - 4) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xe;
-            } else if (512 - 4 <= i && i < 512) {
-                *(reinterpret_cast<char*>(tls_block) + i) = 0xf;
+        void* tls_block = malloc(TLS_BLOCK_SIZE + TLS_BLOCK_SIZE_EXTRA_SPACE);
+        {
+            size_t i;
+            char* p;
+            char deadbeef[] = "deadbeef";
+            for (i = 0, p = reinterpret_cast<char*>(tls_block); i < TLS_BLOCK_SIZE + TLS_BLOCK_SIZE_EXTRA_SPACE; i++, p++) {
+                *p = deadbeef[i % 8];
             }
         }
 
@@ -458,14 +461,17 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
         LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(binaries_[0].file_tls().p_memsz))
                   << LOG_BITS(reinterpret_cast<uint64_t>(binaries_[0].file_tls().p_filesz));
 
-        memcpy(reinterpret_cast<char*>(tls_block) + 512 - binaries_[0].file_tls().p_memsz,
+        // Set .tdata
+        memcpy(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE - binaries_[0].file_tls().p_memsz,
                reinterpret_cast<const void*>(binaries_[0].base_addr() + binaries_[0].file_tls().p_vaddr), binaries_[0].file_tls().p_memsz);
-        memset(reinterpret_cast<char*>(tls_block) + 512 - (binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz), 0x0,
-               binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz);
+        // Set .tbss
+        memset(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE - (binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz),
+               0x0, binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz);
 
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + 512) = reinterpret_cast<char*>(tls_block) + 512;
+        *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE) =
+            reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE;
 
-        syscall(SYS_arch_prctl, ARCH_SET_FS, reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + 512));
+        syscall(SYS_arch_prctl, ARCH_SET_FS, reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE));
     }
 
     // TODO
@@ -633,7 +639,8 @@ void DynLoader::Relocate() {
                         break;
                     }
                     void* dest = reinterpret_cast<void*>(bin.base_addr() + r.r_offset);
-                    LOG(INFO) << LOG_BITS(src) << LOG_BITS(dest) << LOG_BITS(*reinterpret_cast<const unsigned long*>(src)) << LOG_BITS(size);
+                    LOG(INFO) << LOG_BITS(src) << LOG_BITS(dest) << LOG_BITS(*reinterpret_cast<const unsigned long*>(src))
+                              << LOG_BITS(size);
                     std::memcpy(dest, src, size);
                     // std::abort();
                     break;

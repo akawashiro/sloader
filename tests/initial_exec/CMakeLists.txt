@@ -9,3 +9,7 @@ add_test(
   COMMAND
     python3 ${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_BINARY_DIR}/sloader
     ${CMAKE_BINARY_DIR}/tests/initial_exec/initial_exec)
+
+set_tests_properties(
+  initial_exec
+  PROPERTIES WILL_FAIL TRUE)

@@ -68,6 +68,7 @@ int main(int argc, char* const argv[], char** envp) {
         envs.emplace_back(*env);
     }
 
+
     Elf64_Half etype = GetEType(fullpath);
     if (etype == ET_EXEC) {
         auto exec_loader = MakeExecLoader(fullpath, argv0);

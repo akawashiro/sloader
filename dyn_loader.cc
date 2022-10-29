@@ -12,6 +12,7 @@
 
 #include "libc_mapping.h"
 
+extern thread_local unsigned long sloader_dummy_to_secure_tls_space[];
 void write_sloader_dummy_to_secure_tls_space();
 
 namespace {
@@ -440,39 +441,27 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
     //
     // =========== address ==========>
     //
-    // tls_block                                                                  tls_block + tls_block_size
+    // tls_block (= sloader_dummy_to_secure_tls_space)                       tls_block + TLS_SPACE_FOR_LOADEE
     // |                                                                                                   |
     // v                                                                                                   v
     // [.tdata of binaries_[n]] [.tbss of binaries_[n]] ... [.tdata of binaries_[0]] [.tbss of binaries_[0]]
 
-    size_t tls_block_size = 0;
-    constexpr size_t TLS_BLOCK_SIZE_EXTRA_SPACE = 512;
-
-    for (const ELFBinary& b : binaries_) {
-        if (b.has_tls()) {
-            tls_block_size += b.file_tls().p_memsz;
-        }
-    }
-    if (tls_block_size < 4096) tls_block_size = 4096;
-
-    tls_block_size = (tls_block_size - 4096 + 1) / 4096 * 4096 + 4096;
-
-    void* tls_block = malloc(tls_block_size + TLS_BLOCK_SIZE_EXTRA_SPACE);
     {
-        size_t i;
-        char* p;
-        char deadbeef[] = "deadbeef";
-        for (i = 0, p = reinterpret_cast<char*>(tls_block); i < tls_block_size + TLS_BLOCK_SIZE_EXTRA_SPACE; i++, p++) {
-            *p = deadbeef[i % 8];
+        size_t tls_block_size = 0;
+        for (const ELFBinary& b : binaries_) {
+            if (b.has_tls()) {
+                tls_block_size += b.file_tls().p_memsz;
+            }
         }
+        CHECK_LE(tls_block_size, 4096UL);
     }
-    size_t tls_offset = tls_block_size;
 
-    bool has_tls_bin = false;
+    void* tls_block = sloader_dummy_to_secure_tls_space;
+    size_t tls_offset = 4096;  // TODO TLS_SPACE_FOR_LOADEE
+
     // Copy .tdata and .tbss of each binary
     for (const ELFBinary& b : binaries_) {
         if (b.has_tls()) {
-            has_tls_bin = true;
             LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block)) << LOG_BITS(reinterpret_cast<uint64_t>(b.file_tls().p_memsz));
             LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(b.file_tls().p_memsz))
                       << LOG_BITS(reinterpret_cast<uint64_t>(b.file_tls().p_filesz)) << LOG_KEY(b.path());
@@ -489,14 +478,6 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
         }
     }
 
-    if (has_tls_bin) {
-        // TODO: Currently, libc and custom TLS initialization cannot co-exist. This is really serious problem.
-        syscall(SYS_arch_prctl, ARCH_SET_FS, reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + tls_block_size));
-    }
-
-    // TODO
-    // After SYS_arch_prctl, we cannot use glog.
-    // LOG(INFO) << LOG_BITS(binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
     ExecuteCore(stack, stack_num, binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
 
     free(stack);

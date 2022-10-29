@@ -1,12 +1,15 @@
 // This file is to secure memory space just after %fs register.
 
-namespace {
-constexpr int TLS_SPACE_FOR_LOADEE = 4;
-thread_local volatile unsigned long sloader_dummy_to_secure_tls_space[TLS_SPACE_FOR_LOADEE] = {0, 0, 0, 0};
-}  // namespace
+constexpr int TLS_SPACE_FOR_LOADEE = 4096;
+thread_local unsigned char sloader_dummy_to_secure_tls_space[TLS_SPACE_FOR_LOADEE] = {0, 0, 0, 0};
 
 void write_sloader_dummy_to_secure_tls_space() {
-    for (int i = 0; i < TLS_SPACE_FOR_LOADEE; i++) {
-        sloader_dummy_to_secure_tls_space[i] = 0xdeadbeefdeadbeef;
-    }
+    sloader_dummy_to_secure_tls_space[0] = 0xaa;
+    sloader_dummy_to_secure_tls_space[1] = 0xaa;
+    sloader_dummy_to_secure_tls_space[2] = 0xaa;
+    sloader_dummy_to_secure_tls_space[3] = 0xaa;
+    sloader_dummy_to_secure_tls_space[TLS_SPACE_FOR_LOADEE - 4] = 0xab;
+    sloader_dummy_to_secure_tls_space[TLS_SPACE_FOR_LOADEE - 3] = 0xcd;
+    sloader_dummy_to_secure_tls_space[TLS_SPACE_FOR_LOADEE - 2] = 0xab;
+    sloader_dummy_to_secure_tls_space[TLS_SPACE_FOR_LOADEE - 1] = 0xcd;
 }

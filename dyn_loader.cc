@@ -12,6 +12,9 @@
 
 #include "libc_mapping.h"
 
+extern thread_local unsigned long sloader_dummy_to_secure_tls_space[];
+void write_sloader_dummy_to_secure_tls_space();
+
 namespace {
 
 void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res, const std::string& filename) {
@@ -438,45 +441,43 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
     //
     // =========== address ==========>
     //
-    // tls_block                                                                  tls_block + TLS_BLOCK_SIZE
+    // tls_block (= sloader_dummy_to_secure_tls_space)                       tls_block + TLS_SPACE_FOR_LOADEE
     // |                                                                                                   |
     // v                                                                                                   v
     // [.tdata of binaries_[n]] [.tbss of binaries_[n]] ... [.tdata of binaries_[0]] [.tbss of binaries_[0]]
 
-    constexpr size_t TLS_BLOCK_SIZE = 1024;
-    constexpr size_t TLS_BLOCK_SIZE_EXTRA_SPACE = 512;
-    if (binaries_[0].has_tls()) {
-        void* tls_block = malloc(TLS_BLOCK_SIZE + TLS_BLOCK_SIZE_EXTRA_SPACE);
-        {
-            size_t i;
-            char* p;
-            char deadbeef[] = "deadbeef";
-            for (i = 0, p = reinterpret_cast<char*>(tls_block); i < TLS_BLOCK_SIZE + TLS_BLOCK_SIZE_EXTRA_SPACE; i++, p++) {
-                *p = deadbeef[i % 8];
+    {
+        size_t tls_block_size = 0;
+        for (const ELFBinary& b : binaries_) {
+            if (b.has_tls()) {
+                tls_block_size += b.file_tls().p_memsz;
             }
         }
-
-        LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block))
-                  << LOG_BITS(reinterpret_cast<uint64_t>(binaries_[0].file_tls().p_memsz));
-        LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(binaries_[0].file_tls().p_memsz))
-                  << LOG_BITS(reinterpret_cast<uint64_t>(binaries_[0].file_tls().p_filesz));
-
-        // Set .tdata
-        memcpy(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE - binaries_[0].file_tls().p_memsz,
-               reinterpret_cast<const void*>(binaries_[0].base_addr() + binaries_[0].file_tls().p_vaddr), binaries_[0].file_tls().p_memsz);
-        // Set .tbss
-        memset(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE - (binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz),
-               0x0, binaries_[0].file_tls().p_memsz - binaries_[0].file_tls().p_filesz);
-
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE) =
-            reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE;
-
-        syscall(SYS_arch_prctl, ARCH_SET_FS, reinterpret_cast<void*>(reinterpret_cast<char*>(tls_block) + TLS_BLOCK_SIZE));
+        CHECK_LE(tls_block_size, 4096UL);
     }
 
-    // TODO
-    // After SYS_arch_prctl, we cannot use glog.
-    // LOG(INFO) << LOG_BITS(binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
+    void* tls_block = sloader_dummy_to_secure_tls_space;
+    size_t tls_offset = 4096;  // TODO TLS_SPACE_FOR_LOADEE
+
+    // Copy .tdata and .tbss of each binary
+    for (const ELFBinary& b : binaries_) {
+        if (b.has_tls()) {
+            LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(tls_block)) << LOG_BITS(reinterpret_cast<uint64_t>(b.file_tls().p_memsz));
+            LOG(INFO) << LOG_BITS(reinterpret_cast<uint64_t>(b.file_tls().p_memsz))
+                      << LOG_BITS(reinterpret_cast<uint64_t>(b.file_tls().p_filesz)) << LOG_KEY(b.path());
+
+            // Set .tdata
+            memcpy(reinterpret_cast<char*>(tls_block) + tls_offset - b.file_tls().p_memsz,
+                   reinterpret_cast<const void*>(b.base_addr() + b.file_tls().p_vaddr), b.file_tls().p_memsz);
+            // Set .tbss
+            memset(reinterpret_cast<char*>(tls_block) + tls_offset - (b.file_tls().p_memsz - b.file_tls().p_filesz), 0x0,
+                   b.file_tls().p_memsz - b.file_tls().p_filesz);
+
+            *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + tls_offset) = reinterpret_cast<char*>(tls_block) + tls_offset;
+            tls_offset -= b.file_tls().p_memsz;
+        }
+    }
+
     ExecuteCore(stack, stack_num, binaries_[0].ehdr().e_entry + binaries_[0].base_addr());
 
     free(stack);
@@ -657,5 +658,7 @@ void DynLoader::Relocate() {
 
 std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
                                          const std::vector<std::string>& args) {
+    // TODO: Remove this call
+    write_sloader_dummy_to_secure_tls_space();
     return std::make_unique<DynLoader>(main_path, args, envs);
 }

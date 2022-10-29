@@ -29,6 +29,10 @@ add_subdirectory(constructor)
 
 add_subdirectory(local_exec)
 
+add_subdirectory(local_dynamic)
+
+add_subdirectory(generic_dynamic)
+
 add_subdirectory(initial_exec)
 
 add_subdirectory(ls)

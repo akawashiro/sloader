@@ -12,6 +12,8 @@
 
 #include "libc_mapping.h"
 
+void write_sloader_dummy_to_secure_tls_space();
+
 namespace {
 
 void read_ldsoconf_dfs(std::vector<std::filesystem::path>& res, const std::string& filename) {
@@ -675,5 +677,7 @@ void DynLoader::Relocate() {
 
 std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
                                          const std::vector<std::string>& args) {
+    // TODO: Remove this call
+    write_sloader_dummy_to_secure_tls_space();
     return std::make_unique<DynLoader>(main_path, args, envs);
 }

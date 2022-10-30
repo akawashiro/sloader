@@ -42,6 +42,12 @@ int main() {
     i0 = 0xeeeeeeee;
     i1 = 0xffffffff;
 
+    RAW_PRINT_STR("__thread uint32_t i0=");
+    RAW_PRINT_HEX(i0);
+    RAW_PRINT_STR("\n&i0=");
+    RAW_PRINT_HEX(&i0);
+    RAW_PRINT_STR("\n");
+
     RAW_PRINT_STR("\nShould be 0xaabbccdd: uint32_t j=");
     RAW_PRINT_HEX(j);
     RAW_PRINT_STR("\n&j=");

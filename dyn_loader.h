@@ -90,6 +90,7 @@ private:
     std::vector<ELFBinary> binaries_;
     void Relocate();
     std::optional<std::pair<size_t, size_t>> SearchSym(const std::string& name, bool skip_main);
+    Elf64_Addr TLSSymOffset(const std::string& name);
 };
 
 std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,

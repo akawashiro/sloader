@@ -547,6 +547,26 @@ std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(const std::string&
     return std::nullopt;
 }
 
+Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
+    // Intentional use of underflow
+    Elf64_Addr offset = 0x0;
+    for (size_t i = 0; i < binaries_.size(); i++) {
+        for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
+            Elf64_Sym s = binaries_[i].symtabs()[j];
+            std::string n = s.st_name + binaries_[i].strtab();
+            if (n == name && s.st_shndx != SHN_UNDEF && ELF64_ST_TYPE(s.st_info) == STT_TLS) {
+                Elf64_Addr o = offset - binaries_[i].file_tls().p_memsz + s.st_value;
+                LOG(INFO) << "Found " << name << " at index " << j << " of " << binaries_[i].path() << LOG_BITS(o);
+                return offset - binaries_[i].file_tls().p_memsz + s.st_value;
+            }
+        }
+        if (binaries_[i].has_tls()) {
+            offset -= binaries_[i].file_tls().p_memsz;
+        }
+    }
+    LOG(FATAL) << "Cannot find " << name;
+}
+
 void DynLoader::Relocate() {
     for (const auto& bin : binaries_) {
         LOG(INFO) << bin.path();
@@ -614,6 +634,9 @@ void DynLoader::Relocate() {
                     break;
                 }
                 case R_X86_64_TPOFF64: {
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(bin.base_addr() + r.r_offset);
+                    Elf64_Addr offset = TLSSymOffset(name);
+                    *reloc_addr = offset;
                     break;
                 }
                 case R_X86_64_DTPMOD64: {

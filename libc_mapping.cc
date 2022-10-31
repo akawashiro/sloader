@@ -68,7 +68,11 @@
 #include <cstring>
 #include <ctime>
 
+extern thread_local unsigned long sloader_dummy_to_secure_tls_space[];
+extern unsigned long sloader_tls_offset;
+
 namespace libc_mapping {
+
 const char* (*strchr_c)(const char*, int) = strchr;
 const char* (*strrchr_c)(const char*, int) = strrchr;
 const void* (*rawmemchr_c)(const void*, int) = rawmemchr;
@@ -81,6 +85,15 @@ const char* (*strchrnul_c)(const char*, int) = strchrnul;
 
 void sloader_dummy_fun() {
     ;
+}
+
+typedef struct {
+    unsigned long int ti_module;
+    unsigned long int ti_offset;
+} tls_index;
+
+void* sloader_tls_get_addr(tls_index* ti){
+    return reinterpret_cast<void*>(reinterpret_cast<char*>(sloader_dummy_to_secure_tls_space) +  sloader_tls_offset + ti->ti_offset);
 }
 
 void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char** argv, void (*init)(void), void (*fini)(void),
@@ -110,8 +123,8 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     // {"__strncat_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__syslog_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__syslog_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__tls_get_addr", reinterpret_cast<Elf64_Addr>(nullptr)},
     // {"__vfprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"__tls_get_addr", reinterpret_cast<Elf64_Addr>(&sloader_tls_get_addr)},
     {"lseek", reinterpret_cast<Elf64_Addr>(&lseek)},
     {"getlogin", reinterpret_cast<Elf64_Addr>(&getlogin)},
     {"utmpxname", reinterpret_cast<Elf64_Addr>(&utmpxname)},

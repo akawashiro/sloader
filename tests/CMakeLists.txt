@@ -149,12 +149,6 @@ add_test(
     python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
     ${CMAKE_BINARY_DIR}/sloader /bin/readelf -a ${CMAKE_BINARY_DIR}/sloader)
 
-set_tests_properties(
-  coreutils_stat
-  coreutils_hostid
-  coreutils_id
-  PROPERTIES WILL_FAIL TRUE)
-
 if(CUSTOM_LIBC_PATH)
   add_custom_target(
     hello_static_custom_libc ALL

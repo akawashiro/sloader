@@ -13,6 +13,7 @@
 #include "libc_mapping.h"
 
 extern thread_local unsigned long sloader_dummy_to_secure_tls_space[];
+extern unsigned long sloader_tls_offset;
 void write_sloader_dummy_to_secure_tls_space();
 
 namespace {
@@ -457,7 +458,6 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
     }
 
     void* tls_block = sloader_dummy_to_secure_tls_space;
-    size_t tls_offset = 4096;  // TODO TLS_SPACE_FOR_LOADEE
 
     // Copy .tdata and .tbss of each binary
     for (const ELFBinary& b : binaries_) {
@@ -467,14 +467,14 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
                       << LOG_BITS(reinterpret_cast<uint64_t>(b.file_tls().p_filesz)) << LOG_KEY(b.path());
 
             // Set .tdata
-            memcpy(reinterpret_cast<char*>(tls_block) + tls_offset - b.file_tls().p_memsz,
+            memcpy(reinterpret_cast<char*>(tls_block) + sloader_tls_offset - b.file_tls().p_memsz,
                    reinterpret_cast<const void*>(b.base_addr() + b.file_tls().p_vaddr), b.file_tls().p_memsz);
             // Set .tbss
-            memset(reinterpret_cast<char*>(tls_block) + tls_offset - (b.file_tls().p_memsz - b.file_tls().p_filesz), 0x0,
+            memset(reinterpret_cast<char*>(tls_block) + sloader_tls_offset - (b.file_tls().p_memsz - b.file_tls().p_filesz), 0x0,
                    b.file_tls().p_memsz - b.file_tls().p_filesz);
 
-            *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + tls_offset) = reinterpret_cast<char*>(tls_block) + tls_offset;
-            tls_offset -= b.file_tls().p_memsz;
+            *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + sloader_tls_offset) = reinterpret_cast<char*>(tls_block) + sloader_tls_offset;
+            sloader_tls_offset -= b.file_tls().p_memsz;
         }
     }
 
@@ -640,6 +640,9 @@ void DynLoader::Relocate() {
                     break;
                 }
                 case R_X86_64_DTPMOD64: {
+                    Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(bin.base_addr() + r.r_offset);
+                    // TODO: Need reference.
+                    *reloc_addr = 0x1;
                     break;
                 }
                 case R_X86_64_DTPOFF64: {

@@ -136,6 +136,10 @@ add_test(NAME coreutils_uname
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
                  ${CMAKE_BINARY_DIR}/sloader /bin/uname -a)
 
+add_test(NAME coreutils_ps
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /usr/bin/ps --help)
+
 # GNU Bintuils tests
 add_test(
   NAME binutils_objdump

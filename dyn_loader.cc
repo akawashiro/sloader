@@ -473,7 +473,8 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
             memset(reinterpret_cast<char*>(tls_block) + sloader_tls_offset - (b.file_tls().p_memsz - b.file_tls().p_filesz), 0x0,
                    b.file_tls().p_memsz - b.file_tls().p_filesz);
 
-            *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + sloader_tls_offset) = reinterpret_cast<char*>(tls_block) + sloader_tls_offset;
+            *reinterpret_cast<void**>(reinterpret_cast<char*>(tls_block) + sloader_tls_offset) =
+                reinterpret_cast<char*>(tls_block) + sloader_tls_offset;
             sloader_tls_offset -= b.file_tls().p_memsz;
         }
     }
@@ -618,13 +619,18 @@ void DynLoader::Relocate() {
                 }
                 case R_X86_64_64: {
                     const auto opt = SearchSym(name);
-                    if (!opt) {
-                        // TODO
-                        LOG(FATAL) << "Cannot find " << name;
+                    Elf64_Addr sym_addr;
+
+                    if (libc_mapping::sloader_libc_map.find(name) != libc_mapping::sloader_libc_map.end()) {
+                        sym_addr = libc_mapping::sloader_libc_map[name];
+                    } else if (opt) {
+                        const auto [bin_index, sym_index] = opt.value();
+                        sym_addr = binaries_[bin_index].GetSymbolAddr(sym_index);
+                    } else {
+                        LOG(WARNING) << "Cannot find " << name << LOG_KEY(bin.path());
                         break;
                     }
-                    const auto [bin_index, sym_index] = opt.value();
-                    Elf64_Addr sym_addr = binaries_[bin_index].GetSymbolAddr(sym_index);
+
                     Elf64_Addr* reloc_addr = reinterpret_cast<Elf64_Addr*>(bin.base_addr() + r.r_offset);
 
                     // TODO: This is wrong, maybe. What is symbol value?

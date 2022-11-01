@@ -34,6 +34,7 @@
 #include <regex.h>
 #include <resolv.h>
 #include <sched.h>
+#include <search.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <spawn.h>
@@ -93,6 +94,7 @@ const char* (*strpbrk_c)(const char*, const char*) = strpbrk;
 double (*frexp_c)(double, int*) = frexp;
 double (*ldexp_c)(double, int) = ldexp;
 const char* (*strchrnul_c)(const char*, int) = strchrnul;
+const char* (*strcasestr_c)(const char* haystack, const char* needle) = strcasestr;
 
 void sloader_dummy_fun() {
     ;
@@ -123,23 +125,6 @@ void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char** 
 }
 
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
-    // {"__progname", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__progname_full", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__rawmemchr", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__register_atfork", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__res_context_hostalias", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__res_context_query", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__res_context_search", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__res_get_nsaddr", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__res_iclose", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__resolv_context_get", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__resolv_context_get_override", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__resolv_context_put", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__strncat_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__syslog_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__syslog_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"__vfprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    // {"ctf_open", reinterpret_cast<Elf64_Addr>(&ctf_open)},
     {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"ZSTD_trace_compress_end", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"ZSTD_trace_decompress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
@@ -168,6 +153,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"__getgroups_chk", reinterpret_cast<Elf64_Addr>(&__getgroups_chk)},
     {"__gmon_start__", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__gmtime_r", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"__isoc99_fscanf", reinterpret_cast<Elf64_Addr>(&fscanf)},
     {"__isoc99_sscanf", reinterpret_cast<Elf64_Addr>(&sscanf)},  // TODO
     {"__libc_current_sigrtmax", reinterpret_cast<Elf64_Addr>(&__libc_current_sigrtmax)},
     {"__libc_current_sigrtmin", reinterpret_cast<Elf64_Addr>(&__libc_current_sigrtmin)},
@@ -232,6 +218,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"canonicalize_file_name", reinterpret_cast<Elf64_Addr>(&canonicalize_file_name)},
     {"capget", reinterpret_cast<Elf64_Addr>(&capget)},
     {"capset", reinterpret_cast<Elf64_Addr>(&capset)},
+    {"cfgetospeed", reinterpret_cast<Elf64_Addr>(&cfgetospeed)},
     {"chdir", reinterpret_cast<Elf64_Addr>(&chdir)},
     {"chmod", reinterpret_cast<Elf64_Addr>(&chmod)},
     {"chroot", reinterpret_cast<Elf64_Addr>(&chroot)},
@@ -492,6 +479,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"pipe", reinterpret_cast<Elf64_Addr>(&pipe)},
     {"pipe2", reinterpret_cast<Elf64_Addr>(&pipe2)},
     {"poll", reinterpret_cast<Elf64_Addr>(&poll)},
+    {"popen", reinterpret_cast<Elf64_Addr>(&popen)},
     {"posix_fadvise", reinterpret_cast<Elf64_Addr>(&posix_fadvise)},
     {"posix_fallocate64", reinterpret_cast<Elf64_Addr>(&posix_fallocate64)},
     {"posix_madvise", reinterpret_cast<Elf64_Addr>(&posix_madvise)},
@@ -613,6 +601,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"sendto", reinterpret_cast<Elf64_Addr>(&sendto)},
     {"setbuf", reinterpret_cast<Elf64_Addr>(&setbuf)},
     {"setbuf", reinterpret_cast<Elf64_Addr>(&setbuf)},
+    {"setbuffer", reinterpret_cast<Elf64_Addr>(&setbuffer)},
     {"setcontext", reinterpret_cast<Elf64_Addr>(&setcontext)},
     {"setenv", reinterpret_cast<Elf64_Addr>(&setenv)},
     {"setgid", reinterpret_cast<Elf64_Addr>(&setgid)},
@@ -620,6 +609,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"setlocale", reinterpret_cast<Elf64_Addr>(&setlocale)},
     {"setmntent", reinterpret_cast<Elf64_Addr>(&setmntent)},
     {"setns", reinterpret_cast<Elf64_Addr>(&setns)},
+    {"setpriority", reinterpret_cast<Elf64_Addr>(&setpriority)},
     {"setresgid", reinterpret_cast<Elf64_Addr>(&setresgid)},
     {"setresuid", reinterpret_cast<Elf64_Addr>(&setresuid)},
     {"setrlimit", reinterpret_cast<Elf64_Addr>(&setrlimit)},
@@ -667,6 +657,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"stpcpy", reinterpret_cast<Elf64_Addr>(&stpcpy)},
     {"stpncpy", reinterpret_cast<Elf64_Addr>(&stpncpy)},
     {"strcasecmp", reinterpret_cast<Elf64_Addr>(&strcasecmp)},
+    {"strcasestr", reinterpret_cast<Elf64_Addr>(&strcasestr_c)},
     {"strcat", reinterpret_cast<Elf64_Addr>(&strcat)},
     {"strchr", reinterpret_cast<Elf64_Addr>(strchr_c)},
     {"strchrnul", reinterpret_cast<Elf64_Addr>(strchrnul_c)},
@@ -692,6 +683,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"strspn", reinterpret_cast<Elf64_Addr>(&strspn)},
     {"strstr", reinterpret_cast<Elf64_Addr>(strstr_c)},
     {"strtod", reinterpret_cast<Elf64_Addr>(&strtod)},
+    {"strtof", reinterpret_cast<Elf64_Addr>(&strtof)},
     {"strtok", reinterpret_cast<Elf64_Addr>(&strtok)},
     {"strtok_r", reinterpret_cast<Elf64_Addr>(&strtok_r)},
     {"strtok_r", reinterpret_cast<Elf64_Addr>(&strtok_r)},
@@ -708,10 +700,14 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"syscall", reinterpret_cast<Elf64_Addr>(&syscall)},
     {"sysconf", reinterpret_cast<Elf64_Addr>(&sysconf)},
     {"sysinfo", reinterpret_cast<Elf64_Addr>(&sysinfo)},
+    {"tcdrain", reinterpret_cast<Elf64_Addr>(&tcdrain)},
+    {"tcflush", reinterpret_cast<Elf64_Addr>(&tcflush)},
+    {"tcflush", reinterpret_cast<Elf64_Addr>(&tcflush)},
     {"tcgetattr", reinterpret_cast<Elf64_Addr>(&tcgetattr)},
     {"tcgetpgrp", reinterpret_cast<Elf64_Addr>(&tcgetpgrp)},
     {"tcsetattr", reinterpret_cast<Elf64_Addr>(&tcsetattr)},
     {"textdomain", reinterpret_cast<Elf64_Addr>(&textdomain)},
+    {"tfind", reinterpret_cast<Elf64_Addr>(&tfind)},
     {"time", reinterpret_cast<Elf64_Addr>(&time)},
     {"timegm", reinterpret_cast<Elf64_Addr>(&timegm)},
     {"timerfd_create", reinterpret_cast<Elf64_Addr>(&timerfd_create)},
@@ -719,6 +715,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"tmpfile", reinterpret_cast<Elf64_Addr>(&tmpfile)},
     {"towlower", reinterpret_cast<Elf64_Addr>(&towlower)},
     {"truncate", reinterpret_cast<Elf64_Addr>(&truncate)},
+    {"tsearch", reinterpret_cast<Elf64_Addr>(&tsearch)},
     {"ttyname", reinterpret_cast<Elf64_Addr>(&ttyname)},
     {"tzset", reinterpret_cast<Elf64_Addr>(&tzset)},
     {"umask", reinterpret_cast<Elf64_Addr>(&umask)},

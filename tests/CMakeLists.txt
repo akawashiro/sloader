@@ -136,14 +136,6 @@ add_test(NAME coreutils_uname
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
                  ${CMAKE_BINARY_DIR}/sloader /bin/uname -a)
 
-add_test(NAME coreutils_ps
-         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-                 ${CMAKE_BINARY_DIR}/sloader /usr/bin/ps --help)
-
-add_test(NAME coreutils_top
-         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-                 ${CMAKE_BINARY_DIR}/sloader /usr/bin/top -h)
-
 # GNU Bintuils tests
 add_test(
   NAME binutils_objdump
@@ -156,6 +148,50 @@ add_test(
   COMMAND
     python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
     ${CMAKE_BINARY_DIR}/sloader /bin/readelf -a ${CMAKE_BINARY_DIR}/sloader)
+
+# My daily use tools
+add_test(NAME test_ps
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /usr/bin/ps --help)
+
+add_test(NAME test_top
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader /usr/bin/top -h)
+
+add_test(NAME test_tmux
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader tmux --help)
+
+add_test(NAME test_vim
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader vim --help)
+
+add_test(NAME test_python3
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader python3 --help)
+
+add_test(NAME test_gcc
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader gcc --help)
+
+add_test(NAME test_zsh
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader zsh --help)
+
+add_test(NAME test_rustc
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader rustc --help)
+
+set_tests_properties(
+    test_ps
+    test_top
+    test_tmux
+    test_vim
+    test_python3
+    test_gcc
+    test_zsh
+    test_rustc
+    PROPERTIES WILL_FAIL TRUE)
 
 if(CUSTOM_LIBC_PATH)
   add_custom_target(

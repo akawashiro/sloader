@@ -1,4 +1,5 @@
 #include "libc_mapping.h"
+#include "raw_write.h"
 
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
@@ -96,10 +97,6 @@ double (*ldexp_c)(double, int) = ldexp;
 const char* (*strchrnul_c)(const char*, int) = strchrnul;
 const char* (*strcasestr_c)(const char* haystack, const char* needle) = strcasestr;
 
-void sloader_dummy_fun() {
-    ;
-}
-
 int sloader_register_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void), void* dso_handle) {
     return pthread_atfork(prepare, parent, child);
 }
@@ -124,21 +121,66 @@ void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char** 
     exit(main(argc, argv, NULL));
 }
 
+#define DEFINE_DUMMY_FUN(name) void sloader_##name(){ ; }
+// #define DEFINE_DUMMY_FUN(name) void sloader_##name(){ RAW_PRINT_STR(#name); }
+
+DEFINE_DUMMY_FUN(ZSTD_trace_compress_begin)
+DEFINE_DUMMY_FUN(ZSTD_trace_compress_end)
+DEFINE_DUMMY_FUN(ZSTD_trace_decompress_begin)
+DEFINE_DUMMY_FUN(ZSTD_trace_decompress_end)
+DEFINE_DUMMY_FUN(_ITM_deregisterTMCloneTable)
+DEFINE_DUMMY_FUN(_ITM_registerTMCloneTable)
+DEFINE_DUMMY_FUN(__asprintf_chk)
+DEFINE_DUMMY_FUN(__assert_fail)
+DEFINE_DUMMY_FUN(__cxa_finalize)
+DEFINE_DUMMY_FUN(__gmon_start__)
+DEFINE_DUMMY_FUN(__gmtime_r)
+DEFINE_DUMMY_FUN(__libc_dn_expand)
+DEFINE_DUMMY_FUN(__libc_ns_makecanon)
+DEFINE_DUMMY_FUN(__libc_ns_samename)
+DEFINE_DUMMY_FUN(__libc_res_nameinquery)
+DEFINE_DUMMY_FUN(__libc_res_queriesmatch)
+DEFINE_DUMMY_FUN(__stack_chk_fail)
+DEFINE_DUMMY_FUN(__xpg_strerror_r)
+DEFINE_DUMMY_FUN(__xstat)
+DEFINE_DUMMY_FUN(atexit)
+DEFINE_DUMMY_FUN(__cxa_atexit)
+
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
-    {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"ZSTD_trace_compress_end", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"ZSTD_trace_decompress_begin", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"ZSTD_trace_decompress_end", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"_ITM_deregisterTMCloneTable", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"_ITM_registerTMCloneTable", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__asprintf_chk", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__assert_fail", reinterpret_cast<Elf64_Addr>(nullptr)},
+    // sloader dummy functions
+    {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_compress_begin)},
+    {"ZSTD_trace_compress_end", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_compress_end)},
+    {"ZSTD_trace_decompress_begin", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_decompress_begin)},
+    {"ZSTD_trace_decompress_end", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_decompress_end)},
+    {"_ITM_deregisterTMCloneTable", reinterpret_cast<Elf64_Addr>(&sloader__ITM_deregisterTMCloneTable)},
+    {"_ITM_registerTMCloneTable", reinterpret_cast<Elf64_Addr>(&sloader__ITM_registerTMCloneTable)},
+    {"__asprintf_chk", reinterpret_cast<Elf64_Addr>(&sloader___asprintf_chk)},
+    {"__assert_fail", reinterpret_cast<Elf64_Addr>(&sloader___assert_fail)},
+    {"__cxa_atexit", reinterpret_cast<Elf64_Addr>(&sloader___cxa_atexit)},
+    {"__cxa_finalize", reinterpret_cast<Elf64_Addr>(&sloader___cxa_finalize)},
+    {"__gmon_start__", reinterpret_cast<Elf64_Addr>(&sloader___gmon_start__)},
+    {"__gmtime_r", reinterpret_cast<Elf64_Addr>(&sloader___gmtime_r)},
+    {"__libc_dn_expand", reinterpret_cast<Elf64_Addr>(&sloader___libc_dn_expand)},
+    {"__libc_ns_makecanon", reinterpret_cast<Elf64_Addr>(&sloader___libc_ns_makecanon)},
+    {"__libc_ns_samename", reinterpret_cast<Elf64_Addr>(&sloader___libc_ns_samename)},
+    {"__libc_res_nameinquery", reinterpret_cast<Elf64_Addr>(&sloader___libc_res_nameinquery)},
+    {"__libc_res_queriesmatch", reinterpret_cast<Elf64_Addr>(&sloader___libc_res_queriesmatch)},
+    {"__stack_chk_fail", reinterpret_cast<Elf64_Addr>(&sloader___stack_chk_fail)},
+    {"__xpg_strerror_r", reinterpret_cast<Elf64_Addr>(&sloader___xpg_strerror_r)},
+    {"__xstat", reinterpret_cast<Elf64_Addr>(&sloader___xstat)},
+    {"atexit", reinterpret_cast<Elf64_Addr>(&sloader_atexit)},
+
+    // sloader original functions
+    {"__libc_start_main", reinterpret_cast<Elf64_Addr>(&sloader_libc_start_main)},
+    {"__register_atfork", reinterpret_cast<Elf64_Addr>(&sloader_register_atfork)},
+    {"__tls_get_addr", reinterpret_cast<Elf64_Addr>(&sloader_tls_get_addr)},
+
+    // libc functions
     {"__ctype_b_loc", reinterpret_cast<Elf64_Addr>(&__ctype_b_loc)},
     {"__ctype_get_mb_cur_max", reinterpret_cast<Elf64_Addr>(&__ctype_get_mb_cur_max)},
     {"__ctype_tolower_loc", reinterpret_cast<Elf64_Addr>(&__ctype_tolower_loc)},
     {"__ctype_toupper_loc", reinterpret_cast<Elf64_Addr>(&__ctype_toupper_loc)},
-    {"__cxa_atexit", reinterpret_cast<Elf64_Addr>(&sloader_dummy_fun)},
-    {"__cxa_finalize", reinterpret_cast<Elf64_Addr>(nullptr)},
+    {"__environ", reinterpret_cast<Elf64_Addr>(&__environ)},
     {"__errno_location", reinterpret_cast<Elf64_Addr>(&__errno_location)},
     {"__explicit_bzero_chk", reinterpret_cast<Elf64_Addr>(&__explicit_bzero_chk)},
     {"__fdelt_chk", reinterpret_cast<Elf64_Addr>(&__fdelt_chk)},
@@ -151,20 +193,12 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"__fsetlocking", reinterpret_cast<Elf64_Addr>(&__fsetlocking)},
     {"__getdelim", reinterpret_cast<Elf64_Addr>(&__getdelim)},
     {"__getgroups_chk", reinterpret_cast<Elf64_Addr>(&__getgroups_chk)},
-    {"__gmon_start__", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__gmtime_r", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__isoc99_fscanf", reinterpret_cast<Elf64_Addr>(&fscanf)},
     {"__isoc99_sscanf", reinterpret_cast<Elf64_Addr>(&sscanf)},  // TODO
     {"__libc_current_sigrtmax", reinterpret_cast<Elf64_Addr>(&__libc_current_sigrtmax)},
     {"__libc_current_sigrtmin", reinterpret_cast<Elf64_Addr>(&__libc_current_sigrtmin)},
     {"__libc_current_sigrtmin", reinterpret_cast<Elf64_Addr>(&__libc_current_sigrtmin)},
-    {"__libc_dn_expand", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__libc_ns_makecanon", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__libc_ns_samename", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__libc_res_nameinquery", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__libc_res_queriesmatch", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__libc_single_threaded", reinterpret_cast<Elf64_Addr>(&__libc_single_threaded)},
-    {"__libc_start_main", reinterpret_cast<Elf64_Addr>(&sloader_libc_start_main)},
     {"__longjmp_chk", reinterpret_cast<Elf64_Addr>(&longjmp)},
     {"__mbstowcs_chk", reinterpret_cast<Elf64_Addr>(&__mbstowcs_chk)},
     {"__memcpy_chk", reinterpret_cast<Elf64_Addr>(&memcpy)},
@@ -176,28 +210,23 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"__poll_chk", reinterpret_cast<Elf64_Addr>(&__poll_chk)},
     {"__printf_chk", reinterpret_cast<Elf64_Addr>(&__printf_chk)},
     {"__realpath_chk", reinterpret_cast<Elf64_Addr>(&__realpath_chk)},
-    {"__register_atfork", reinterpret_cast<Elf64_Addr>(&sloader_register_atfork)},
     {"__res_nclose", reinterpret_cast<Elf64_Addr>(&__res_nclose)},
     {"__res_ninit", reinterpret_cast<Elf64_Addr>(&__res_ninit)},
     {"__sched_cpucount", reinterpret_cast<Elf64_Addr>(&__sched_cpucount)},
     {"__sigsetjmp", reinterpret_cast<Elf64_Addr>(&__sigsetjmp)},
     {"__snprintf_chk", reinterpret_cast<Elf64_Addr>(&__snprintf_chk)},
     {"__sprintf_chk", reinterpret_cast<Elf64_Addr>(&__sprintf_chk)},
-    {"__stack_chk_fail", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"__stpcpy_chk", reinterpret_cast<Elf64_Addr>(&stpcpy)},
     {"__strcat_chk", reinterpret_cast<Elf64_Addr>(&strcat)},
     {"__strcpy_chk", reinterpret_cast<Elf64_Addr>(&strcpy)},
     {"__strncat_chk", reinterpret_cast<Elf64_Addr>(&strncat)},
     {"__strncpy_chk", reinterpret_cast<Elf64_Addr>(&strncpy)},
     {"__syslog_chk", reinterpret_cast<Elf64_Addr>(&__syslog_chk)},
-    {"__tls_get_addr", reinterpret_cast<Elf64_Addr>(&sloader_tls_get_addr)},
     {"__uflow", reinterpret_cast<Elf64_Addr>(&__uflow)},
     {"__vasprintf_chk", reinterpret_cast<Elf64_Addr>(&__vasprintf_chk)},
     {"__vfprintf_chk", reinterpret_cast<Elf64_Addr>(&__vfprintf_chk)},
     {"__vsnprintf_chk", reinterpret_cast<Elf64_Addr>(&__vsnprintf_chk)},
     {"__xpg_basename", reinterpret_cast<Elf64_Addr>(&__xpg_basename)},
-    {"__xpg_strerror_r", reinterpret_cast<Elf64_Addr>(nullptr)},
-    {"__xstat", reinterpret_cast<Elf64_Addr>(nullptr)},
     {"_exit", reinterpret_cast<Elf64_Addr>(&_exit)},
     {"_longjmp", reinterpret_cast<Elf64_Addr>(&_longjmp)},
     {"_setjmp", reinterpret_cast<Elf64_Addr>(&_setjmp)},
@@ -207,7 +236,6 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"access", reinterpret_cast<Elf64_Addr>(&access)},
     {"access", reinterpret_cast<Elf64_Addr>(&access)},
     {"alphasort", reinterpret_cast<Elf64_Addr>(&alphasort)},
-    {"atexit", reinterpret_cast<Elf64_Addr>(&sloader_dummy_fun)},
     {"atoi", reinterpret_cast<Elf64_Addr>(&atoi)},
     {"atol", reinterpret_cast<Elf64_Addr>(&atol)},
     {"basename", reinterpret_cast<Elf64_Addr>(&basename)},

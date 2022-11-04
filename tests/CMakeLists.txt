@@ -11,33 +11,22 @@ add_test(
   COMMAND ./sloader ./tests/hello_asm
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Hand written testcases
 add_subdirectory(print_env_aux)
-
 add_subdirectory(cascades)
-
 add_subdirectory(find_a_depending_so)
-
 add_subdirectory(hello_glibc)
-
 add_subdirectory(hello_static_glibc)
-
 add_subdirectory(global_variable)
-
 add_subdirectory(static_struct)
-
 add_subdirectory(constructor)
-
 add_subdirectory(local_exec)
-
 add_subdirectory(local_dynamic)
-
 add_subdirectory(generic_dynamic)
-
 add_subdirectory(initial_exec)
-
 add_subdirectory(ls)
-
 add_subdirectory(print_args)
+add_subdirectory(errno)
 
 # GNU Coreutils tests
 add_test(

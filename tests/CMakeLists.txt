@@ -183,9 +183,6 @@ add_test(NAME test_rustc
                  ${CMAKE_BINARY_DIR}/sloader rustc --help)
 
 set_tests_properties(
-    test_ps
-    test_top
-    test_tmux
     test_vim
     test_python3
     test_gcc

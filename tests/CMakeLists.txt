@@ -151,9 +151,9 @@ add_test(NAME test_tmux
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
                  ${CMAKE_BINARY_DIR}/sloader tmux --help)
 
-add_test(NAME test_vim
+add_test(NAME test_nvim
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-                 ${CMAKE_BINARY_DIR}/sloader vim --help)
+                 ${CMAKE_BINARY_DIR}/sloader nvim --help)
 
 add_test(NAME test_python3
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py

@@ -94,6 +94,7 @@ namespace libc_mapping {
 const char* (*strchr_c)(const char*, int) = strchr;
 const char* (*strrchr_c)(const char*, int) = strrchr;
 const void* (*rawmemchr_c)(const void*, int) = rawmemchr;
+const wchar_t* (*wmemchr_c)(const wchar_t*, wchar_t, size_t) = wmemchr;
 const void* (*memchr_c)(const void*, int, size_t) = memchr;
 const void* (*memrchr_c)(const void*, int, size_t) = memrchr;
 const char* (*strstr_c)(const char*, const char*) = strstr;
@@ -163,6 +164,26 @@ DEFINE_DUMMY_FUN(__strtof_nan)
 DEFINE_DUMMY_FUN(_rtld_global_ro)
 
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
+{"strsignal", reinterpret_cast<Elf64_Addr>(&strsignal)},
+{"backtrace_symbols_fd", reinterpret_cast<Elf64_Addr>(&backtrace_symbols_fd)},
+{"strsep", reinterpret_cast<Elf64_Addr>(&strsep)},
+{"fstatat", reinterpret_cast<Elf64_Addr>(&fstatat)},
+{"sched_setaffinity", reinterpret_cast<Elf64_Addr>(&sched_setaffinity)},
+{"mblen", reinterpret_cast<Elf64_Addr>(&mblen)},
+{"wmemcpy", reinterpret_cast<Elf64_Addr>(&wmemcpy)},
+{"wcsrtombs", reinterpret_cast<Elf64_Addr>(&wcsrtombs)},
+{"wcslen", reinterpret_cast<Elf64_Addr>(&wcslen)},
+{"tdelete", reinterpret_cast<Elf64_Addr>(&tdelete)},
+{"__isoc99_vsscanf", reinterpret_cast<Elf64_Addr>(&vsscanf)},
+{"getpgrp", reinterpret_cast<Elf64_Addr>(&getpgrp)},
+{"wctob", reinterpret_cast<Elf64_Addr>(&wctob)},
+{"wmemchr", reinterpret_cast<Elf64_Addr>(&wmemchr_c)},
+{"freelocale", reinterpret_cast<Elf64_Addr>(&freelocale)},
+{"newlocale", reinterpret_cast<Elf64_Addr>(&newlocale)},
+{"getprotobynumber", reinterpret_cast<Elf64_Addr>(&getprotobynumber)},
+{"getprotobyname", reinterpret_cast<Elf64_Addr>(&getprotobyname)},
+{"strerror_l", reinterpret_cast<Elf64_Addr>(&strerror_l)},
+
     {"setsid", reinterpret_cast<Elf64_Addr>(&setsid)},
     {"backtrace", reinterpret_cast<Elf64_Addr>(&backtrace)},
     {"forkpty", reinterpret_cast<Elf64_Addr>(&forkpty)},

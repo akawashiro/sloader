@@ -11,33 +11,22 @@ add_test(
   COMMAND ./sloader ./tests/hello_asm
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Hand written testcases
 add_subdirectory(print_env_aux)
-
 add_subdirectory(cascades)
-
 add_subdirectory(find_a_depending_so)
-
 add_subdirectory(hello_glibc)
-
 add_subdirectory(hello_static_glibc)
-
 add_subdirectory(global_variable)
-
 add_subdirectory(static_struct)
-
 add_subdirectory(constructor)
-
 add_subdirectory(local_exec)
-
 add_subdirectory(local_dynamic)
-
 add_subdirectory(generic_dynamic)
-
 add_subdirectory(initial_exec)
-
 add_subdirectory(ls)
-
 add_subdirectory(print_args)
+add_subdirectory(errno)
 
 # GNU Coreutils tests
 add_test(
@@ -162,9 +151,9 @@ add_test(NAME test_tmux
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
                  ${CMAKE_BINARY_DIR}/sloader tmux --help)
 
-add_test(NAME test_vim
+add_test(NAME test_nvim
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-                 ${CMAKE_BINARY_DIR}/sloader vim --help)
+                 ${CMAKE_BINARY_DIR}/sloader nvim --help)
 
 add_test(NAME test_python3
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
@@ -183,13 +172,8 @@ add_test(NAME test_rustc
                  ${CMAKE_BINARY_DIR}/sloader rustc --help)
 
 set_tests_properties(
-    test_ps
-    test_top
-    test_tmux
-    test_vim
     test_python3
     test_gcc
-    test_zsh
     test_rustc
     PROPERTIES WILL_FAIL TRUE)
 

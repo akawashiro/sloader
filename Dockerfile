@@ -1,6 +1,6 @@
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y ninja-build cmake gcc g++ git python3 python3-distutils python3-dev python3-pip nasm clang-format libcap-dev
+RUN apt-get update && apt-get install -y ninja-build cmake gcc g++ git python3 python3-distutils python3-dev python3-pip nasm clang-format libcap-dev tmux zsh neovim
 COPY . /sold
 WORKDIR /sold
 RUN ./build_chibicc.sh

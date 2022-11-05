@@ -10,11 +10,13 @@
 #include <elf.h>
 #include <errno.h>
 #include <error.h>
+#include <execinfo.h>
 #include <fcntl.h>
 #include <fnmatch.h>
 #include <fts.h>
 #include <getopt.h>
 #include <glob.h>
+#include <gnu/libc-version.h>
 #include <grp.h>
 #include <iconv.h>
 #include <ifaddrs.h>
@@ -31,11 +33,13 @@
 #include <poll.h>
 #include <printf.h>
 #include <pthread.h>
+#include <pty.h>
 #include <pwd.h>
 #include <regex.h>
 #include <resolv.h>
 #include <sched.h>
 #include <search.h>
+#include <semaphore.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <spawn.h>
@@ -46,6 +50,7 @@
 #include <sys/auxv.h>
 #include <sys/capability.h>
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <sys/file.h>
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
@@ -54,6 +59,7 @@
 #include <sys/prctl.h>
 #include <sys/random.h>
 #include <sys/resource.h>
+#include <sys/sendfile.h>
 #include <sys/shm.h>
 #include <sys/signalfd.h>
 #include <sys/socket.h>
@@ -121,7 +127,10 @@ void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char** 
     exit(main(argc, argv, NULL));
 }
 
-#define DEFINE_DUMMY_FUN(name) void sloader_##name(){ ; }
+#define DEFINE_DUMMY_FUN(name) \
+    void sloader_##name() {    \
+        ;                      \
+    }
 // #define DEFINE_DUMMY_FUN(name) void sloader_##name(){ RAW_PRINT_STR(#name); }
 
 DEFINE_DUMMY_FUN(ZSTD_trace_compress_begin)
@@ -145,8 +154,72 @@ DEFINE_DUMMY_FUN(__xpg_strerror_r)
 DEFINE_DUMMY_FUN(__xstat)
 DEFINE_DUMMY_FUN(atexit)
 DEFINE_DUMMY_FUN(__cxa_atexit)
+DEFINE_DUMMY_FUN(_nl_msg_cat_cntr)
+DEFINE_DUMMY_FUN(__fxstat)
+DEFINE_DUMMY_FUN(__strtold_nan)
+DEFINE_DUMMY_FUN(__strtod_nan)
+DEFINE_DUMMY_FUN(__strtof128_nan)
+DEFINE_DUMMY_FUN(__strtof_nan)
+DEFINE_DUMMY_FUN(_rtld_global_ro)
 
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
+    {"setsid", reinterpret_cast<Elf64_Addr>(&setsid)},
+    {"backtrace", reinterpret_cast<Elf64_Addr>(&backtrace)},
+    {"forkpty", reinterpret_cast<Elf64_Addr>(&forkpty)},
+    {"cfsetspeed", reinterpret_cast<Elf64_Addr>(&cfsetspeed)},
+    {"towupper", reinterpret_cast<Elf64_Addr>(&towupper)},
+    {"ptsname", reinterpret_cast<Elf64_Addr>(&ptsname)},
+    {"ftello", reinterpret_cast<Elf64_Addr>(&ftello)},
+    {"setpwent", reinterpret_cast<Elf64_Addr>(&setpwent)},
+    {"vsnprintf", reinterpret_cast<Elf64_Addr>(&vsnprintf)},
+    {"alarm", reinterpret_cast<Elf64_Addr>(&alarm)},
+    {"getpwent", reinterpret_cast<Elf64_Addr>(&getpwent)},
+    {"bind_textdomain_codeset", reinterpret_cast<Elf64_Addr>(&bind_textdomain_codeset)},
+    {"strtoimax", reinterpret_cast<Elf64_Addr>(&strtoimax)},
+    {"utimensat", reinterpret_cast<Elf64_Addr>(&utimensat)},
+    {"fdatasync", reinterpret_cast<Elf64_Addr>(&fdatasync)},
+    {"getpriority", reinterpret_cast<Elf64_Addr>(&getpriority)},
+    {"pthread_barrier_init", reinterpret_cast<Elf64_Addr>(&pthread_barrier_init)},
+    {"sem_wait", reinterpret_cast<Elf64_Addr>(&sem_wait)},
+    {"__read_chk", reinterpret_cast<Elf64_Addr>(&__read_chk)},
+    {"pthread_barrier_wait", reinterpret_cast<Elf64_Addr>(&pthread_barrier_wait)},
+    {"dup3", reinterpret_cast<Elf64_Addr>(&dup3)},
+    {"pathconf", reinterpret_cast<Elf64_Addr>(&pathconf)},
+    {"sem_trywait", reinterpret_cast<Elf64_Addr>(&sem_trywait)},
+    {"rmdir", reinterpret_cast<Elf64_Addr>(&rmdir)},
+    {"__sysconf", reinterpret_cast<Elf64_Addr>(&__sysconf)},
+    {"pthread_barrier_destroy", reinterpret_cast<Elf64_Addr>(&pthread_barrier_destroy)},
+    {"fscanf", reinterpret_cast<Elf64_Addr>(&fscanf)},
+    {"setsid", reinterpret_cast<Elf64_Addr>(&setsid)},
+    {"sem_post", reinterpret_cast<Elf64_Addr>(&sem_post)},
+    {"mkstemp64", reinterpret_cast<Elf64_Addr>(&mkstemp64)},
+    {"pthread_rwlock_trywrlock", reinterpret_cast<Elf64_Addr>(&pthread_rwlock_trywrlock)},
+    {"sendfile64", reinterpret_cast<Elf64_Addr>(&sendfile64)},
+    {"ttyname_r", reinterpret_cast<Elf64_Addr>(&ttyname_r)},
+    {"clock_getres", reinterpret_cast<Elf64_Addr>(&clock_getres)},
+    {"scandir64", reinterpret_cast<Elf64_Addr>(&scandir64)},
+    {"sscanf", reinterpret_cast<Elf64_Addr>(&sscanf)},
+    {"chown", reinterpret_cast<Elf64_Addr>(&chown)},
+    {"cfmakeraw", reinterpret_cast<Elf64_Addr>(&cfmakeraw)},
+    {"mkdtemp", reinterpret_cast<Elf64_Addr>(&mkdtemp)},
+    {"sem_init", reinterpret_cast<Elf64_Addr>(&sem_init)},
+    {"gnu_get_libc_version", reinterpret_cast<Elf64_Addr>(&gnu_get_libc_version)},
+    {"pread64", reinterpret_cast<Elf64_Addr>(&pread64)},
+    {"fchown", reinterpret_cast<Elf64_Addr>(&fchown)},
+    {"__pread64_chk", reinterpret_cast<Elf64_Addr>(&__pread64_chk)},
+    {"futimens", reinterpret_cast<Elf64_Addr>(&futimens)},
+    {"epoll_create", reinterpret_cast<Elf64_Addr>(&epoll_create)},
+    {"eventfd", reinterpret_cast<Elf64_Addr>(&eventfd)},
+    {"sem_destroy", reinterpret_cast<Elf64_Addr>(&sem_destroy)},
+    {"epoll_pwait", reinterpret_cast<Elf64_Addr>(&epoll_pwait)},
+    {"iswalnum", reinterpret_cast<Elf64_Addr>(&iswalnum)},
+    {"system", reinterpret_cast<Elf64_Addr>(&system)},
+    {"mkstemp64", reinterpret_cast<Elf64_Addr>(&mkstemp64)},
+    {"tmpfile64", reinterpret_cast<Elf64_Addr>(&tmpfile64)},
+    {"mremap", reinterpret_cast<Elf64_Addr>(&mremap)},
+    {"setitimer", reinterpret_cast<Elf64_Addr>(&setitimer)},
+    {"_dl_find_object", reinterpret_cast<Elf64_Addr>(&_dl_find_object)},
+
     // sloader dummy functions
     {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_compress_begin)},
     {"ZSTD_trace_compress_end", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_compress_end)},
@@ -169,6 +242,13 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"__xpg_strerror_r", reinterpret_cast<Elf64_Addr>(&sloader___xpg_strerror_r)},
     {"__xstat", reinterpret_cast<Elf64_Addr>(&sloader___xstat)},
     {"atexit", reinterpret_cast<Elf64_Addr>(&sloader_atexit)},
+    {"_nl_msg_cat_cntr", reinterpret_cast<Elf64_Addr>(&sloader__nl_msg_cat_cntr)},
+    {"__fxstat", reinterpret_cast<Elf64_Addr>(&sloader___fxstat)},
+    {"__strtold_nan", reinterpret_cast<Elf64_Addr>(&sloader___strtold_nan)},
+    {"__strtod_nan", reinterpret_cast<Elf64_Addr>(&sloader___strtod_nan)},
+    {"__strtof128_nan", reinterpret_cast<Elf64_Addr>(&sloader___strtof128_nan)},
+    {"__strtof_nan", reinterpret_cast<Elf64_Addr>(&sloader___strtof_nan)},
+    {"_rtld_global_ro", reinterpret_cast<Elf64_Addr>(&sloader__rtld_global_ro)},
 
     // sloader original functions
     {"__libc_start_main", reinterpret_cast<Elf64_Addr>(&sloader_libc_start_main)},

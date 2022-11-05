@@ -175,7 +175,6 @@ set_tests_properties(
     test_vim
     test_python3
     test_gcc
-    test_zsh
     test_rustc
     PROPERTIES WILL_FAIL TRUE)
 

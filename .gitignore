@@ -3,3 +3,6 @@ glibc-install/*
 glibc-build/*
 build/*
 .cache/*
+*.svg
+*_perf.data
+FlameGraph/*

@@ -20,7 +20,7 @@ public:
     const std::string filename() { return path_.filename().string(); }
     const Elf64_Addr GetSymbolAddr(const size_t symbol_index);
     std::vector<std::string> neededs() { return neededs_; }
-    const std::vector<Elf64_Sym> symtabs() const { return symtabs_; }
+    const std::vector<Elf64_Sym>& symtabs() const { return symtabs_; }
     std::optional<std::filesystem::path> runpath() { return runpath_; }
     std::optional<std::filesystem::path> rpath() { return rpath_; }
     const bool has_tls() const { return has_tls_; }

@@ -1,6 +1,8 @@
 #!/bin/bash -eux
+# How to use
+# perf_svg.sh ./build/sloader /bin/ls
 
-prefix=$(date +'%Y%m%d%H%M%S')
+prefix=perf_svg_$(date +'%Y%m%d%H%M%S')
 perf record --freq=max -g --output=${prefix}_perf.data -- $@
 if [[ ! -d FlameGraph ]]; then
     git clone https://github.com/brendangregg/FlameGraph

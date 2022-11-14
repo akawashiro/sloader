@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash -ux
 # How to use
 # perf_svg.sh ./build/sloader /bin/ls
 

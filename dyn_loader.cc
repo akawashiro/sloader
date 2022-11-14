@@ -259,7 +259,7 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
     Elf64_Addr base_addr = 0x40'0000;
     binaries_.emplace_back(ELFBinary(main_path));
 
-    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/dev/null" : std::getenv("SLOADER_MAP_FILE"));
+    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
     binaries_.back().Load(base_addr, map_file);
     base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 
@@ -527,7 +527,7 @@ std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(const std::string&
     for (size_t i = skip_main ? 1 : 0; i < binaries_.size(); i++) {
         for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
             const Elf64_Sym& s = binaries_[i].symtabs()[j];
-            std::string n = s.st_name + binaries_[i].strtab();
+            std::string_view n(s.st_name + binaries_[i].strtab());
             if (n == name && s.st_shndx != SHN_UNDEF) {
                 LOG(INFO) << "Found " << name << " at index " << j << " of " << binaries_[i].path();
                 return std::make_optional(std::make_pair(i, j));
@@ -537,7 +537,7 @@ std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(const std::string&
     for (size_t i = skip_main ? 1 : 0; i < binaries_.size(); i++) {
         for (size_t j = 0; j < binaries_[i].symtabs().size(); j++) {
             const Elf64_Sym& s = binaries_[i].symtabs()[j];
-            std::string n = s.st_name + binaries_[i].strtab();
+            std::string_view n(s.st_name + binaries_[i].strtab());
             if (n == name && s.st_shndx == SHN_UNDEF && ELF64_ST_BIND(s.st_info) == STB_WEAK) {
                 LOG(WARNING) << "Found " << name << " at index as an weak symbol " << j << " of " << binaries_[i].path();
                 return std::make_optional(std::make_pair(i, j));
@@ -566,8 +566,9 @@ Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
     }
 
     // Workaround for TLS variable in libc.so such as errno
-    if(name == "errno"){
-        return (reinterpret_cast<const char*>(sloader_dummy_to_secure_tls_space) + 4096 - reinterpret_cast<const char*>(&errno));
+    if(libc_mapping::sloader_libc_tls_variables.find(name) != libc_mapping::sloader_libc_tls_variables.end()){
+        const char* addr = libc_mapping::sloader_libc_tls_variables[name];
+        return (reinterpret_cast<const char*>(sloader_dummy_to_secure_tls_space) + 4096 - addr);
     }
     LOG(FATAL) << "Cannot find " << name;
 }

@@ -125,7 +125,6 @@ const char* (*strrchr_c)(const char*, int) = strrchr;
 const void* (*rawmemchr_c)(const void*, int) = rawmemchr;
 const wchar_t* (*wmemchr_c)(const wchar_t*, wchar_t, size_t) = wmemchr;
 const void* (*memchr_c)(const void*, int, size_t) = memchr;
-const void* (*memrchr_c)(const void*, int, size_t) = memrchr;
 const char* (*strstr_c)(const char*, const char*) = strstr;
 const char* (*strpbrk_c)(const char*, const char*) = strpbrk;
 double (*frexp_c)(double, int*) = frexp;
@@ -134,9 +133,27 @@ const char* (*strchrnul_c)(const char*, int) = strchrnul;
 const char* (*strcasestr_c)(const char* haystack, const char* needle) = strcasestr;
 double (*modf_c)(double x, double* iptr) = modf;
 const char* (*rindex_c)(const char* s, int c) = rindex;
-const wchar_t* (*wcschr_c)(const wchar_t* string, wchar_t character) = wcschr;
 const wchar_t* (*wcsstr_c)(const wchar_t* dest, const wchar_t* src) = wcsstr;
 const wchar_t* (*wcspbrk_c)(const wchar_t* wcs1, const wchar_t* wcs2) = wcspbrk;
+
+// TODO: I don't know why these functions need dummy definition not casts of function pointers.
+// const wchar_t* (*wcschr_c)(const wchar_t* string, wchar_t character) = wcschr;
+const wchar_t* wcschr_c(const wchar_t* string, wchar_t character) {
+    // printf("wcschr_c: string=%p wc=%d\n", string, character);
+    return wcschr(string, character);
+}
+
+// const wchar_t* (*wcsrchr_c)(const wchar_t *wcs, wchar_t wc) = wcsrchr;
+const wchar_t* wcsrchr_c(const wchar_t* wcs, wchar_t wc) {
+    // printf("wcsrchr_c: wcs=%p wc=%d\n", wcs, wc);
+    return wcsrchr(wcs, wc);
+}
+
+// const void* (*memrchr_c)(const void*, int, size_t) = memrchr;
+const void* memrchr_c(const void* s, int c, size_t n) {
+    // printf("memrchr_c: s=%p c=%d n=%zu\n", s, c, n);
+    return memchr(s, c, n);
+}
 
 int sloader_register_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void), void* dso_handle) {
     return pthread_atfork(prepare, parent, child);
@@ -212,6 +229,12 @@ DEFINE_DUMMY_FUN(__resolv_context_get)
 DEFINE_DUMMY_FUN(__resolv_context_put)
 DEFINE_DUMMY_FUN(__res_get_nsaddr)
 DEFINE_DUMMY_FUN(__res_iclose)
+
+std::map<std::string, const char*> sloader_libc_tls_variables = {
+    {"errno", reinterpret_cast<const char*>(&errno)},
+    {"__h_errno", reinterpret_cast<const char*>(&h_errno)},
+    {"__resp", reinterpret_cast<const char*>(&_res)},
+};
 
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
     // sloader dummy functions
@@ -435,6 +458,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"closelog", reinterpret_cast<Elf64_Addr>(&closelog)},
     {"confstr", reinterpret_cast<Elf64_Addr>(&confstr)},
     {"connect", reinterpret_cast<Elf64_Addr>(&connect)},
+    {"copy_file_range", reinterpret_cast<Elf64_Addr>(&copy_file_range)},
     {"creat", reinterpret_cast<Elf64_Addr>(&creat)},
     {"creat64", reinterpret_cast<Elf64_Addr>(&creat64)},
     {"ctermid", reinterpret_cast<Elf64_Addr>(&ctermid)},
@@ -491,6 +515,8 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"ether_ntohost", reinterpret_cast<Elf64_Addr>(&ether_ntohost)},
     {"euidaccess", reinterpret_cast<Elf64_Addr>(&euidaccess)},
     {"eventfd", reinterpret_cast<Elf64_Addr>(&eventfd)},
+    {"eventfd_read", reinterpret_cast<Elf64_Addr>(&eventfd_read)},
+    {"eventfd_write", reinterpret_cast<Elf64_Addr>(&eventfd_write)},
     {"execl", reinterpret_cast<Elf64_Addr>(&execl)},
     {"execle", reinterpret_cast<Elf64_Addr>(&execle)},
     {"execlp", reinterpret_cast<Elf64_Addr>(&execlp)},
@@ -609,6 +635,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"getgrnam", reinterpret_cast<Elf64_Addr>(&getgrnam)},
     {"getgrnam_r", reinterpret_cast<Elf64_Addr>(&getgrnam_r)},
     {"getgrouplist", reinterpret_cast<Elf64_Addr>(&getgrouplist)},
+    {"getgroups", reinterpret_cast<Elf64_Addr>(&getgroups)},
     {"gethostbyaddr", reinterpret_cast<Elf64_Addr>(&gethostbyaddr)},
     {"gethostbyaddr_r", reinterpret_cast<Elf64_Addr>(&gethostbyaddr_r)},
     {"gethostbyname", reinterpret_cast<Elf64_Addr>(&gethostbyname)},
@@ -701,7 +728,9 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"iconv", reinterpret_cast<Elf64_Addr>(&iconv)},
     {"iconv_close", reinterpret_cast<Elf64_Addr>(&iconv_close)},
     {"iconv_open", reinterpret_cast<Elf64_Addr>(&iconv_open)},
+    {"if_freenameindex", reinterpret_cast<Elf64_Addr>(&if_freenameindex)},
     {"if_indextoname", reinterpret_cast<Elf64_Addr>(&if_indextoname)},
+    {"if_nameindex", reinterpret_cast<Elf64_Addr>(&if_nameindex)},
     {"if_nametoindex", reinterpret_cast<Elf64_Addr>(&if_nametoindex)},
     {"in6addr_any", reinterpret_cast<Elf64_Addr>(&in6addr_any)},
     {"in6addr_any", reinterpret_cast<Elf64_Addr>(&in6addr_any)},
@@ -861,6 +890,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"poll", reinterpret_cast<Elf64_Addr>(&poll)},
     {"popen", reinterpret_cast<Elf64_Addr>(&popen)},
     {"posix_fadvise", reinterpret_cast<Elf64_Addr>(&posix_fadvise)},
+    {"posix_fadvise64", reinterpret_cast<Elf64_Addr>(&posix_fadvise64)},
     {"posix_fallocate", reinterpret_cast<Elf64_Addr>(&posix_fallocate)},
     {"posix_fallocate64", reinterpret_cast<Elf64_Addr>(&posix_fallocate64)},
     {"posix_madvise", reinterpret_cast<Elf64_Addr>(&posix_madvise)},
@@ -875,6 +905,9 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"posix_spawnattr_destroy", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_destroy)},
     {"posix_spawnattr_init", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_init)},
     {"posix_spawnattr_setflags", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_setflags)},
+    {"posix_spawnattr_setpgroup", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_setpgroup)},
+    {"posix_spawnattr_setschedparam", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_setschedparam)},
+    {"posix_spawnattr_setschedpolicy", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_setschedpolicy)},
     {"posix_spawnattr_setsigdefault", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_setsigdefault)},
     {"posix_spawnattr_setsigmask", reinterpret_cast<Elf64_Addr>(&posix_spawnattr_setsigmask)},
     {"posix_spawnp", reinterpret_cast<Elf64_Addr>(&posix_spawnp)},
@@ -882,6 +915,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"prctl", reinterpret_cast<Elf64_Addr>(&prctl)},
     {"pread", reinterpret_cast<Elf64_Addr>(&pread)},
     {"pread64", reinterpret_cast<Elf64_Addr>(&pread64)},
+    {"preadv64v2", reinterpret_cast<Elf64_Addr>(&preadv64v2)},
     {"printf", reinterpret_cast<Elf64_Addr>(&printf)},
     {"process_vm_readv", reinterpret_cast<Elf64_Addr>(&process_vm_readv)},
     {"process_vm_writev", reinterpret_cast<Elf64_Addr>(&process_vm_writev)},
@@ -894,6 +928,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"pthread_attr_setdetachstate", reinterpret_cast<Elf64_Addr>(&pthread_attr_setdetachstate)},
     {"pthread_attr_setguardsize", reinterpret_cast<Elf64_Addr>(&pthread_attr_setguardsize)},
     {"pthread_attr_setinheritsched", reinterpret_cast<Elf64_Addr>(&pthread_attr_setinheritsched)},
+    {"pthread_attr_setscope", reinterpret_cast<Elf64_Addr>(&pthread_attr_setscope)},
     {"pthread_attr_setstacksize", reinterpret_cast<Elf64_Addr>(&pthread_attr_setstacksize)},
     {"pthread_barrier_destroy", reinterpret_cast<Elf64_Addr>(&pthread_barrier_destroy)},
     {"pthread_barrier_init", reinterpret_cast<Elf64_Addr>(&pthread_barrier_init)},
@@ -919,6 +954,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"pthread_equal", reinterpret_cast<Elf64_Addr>(&pthread_equal)},
     {"pthread_exit", reinterpret_cast<Elf64_Addr>(&pthread_exit)},
     {"pthread_getconcurrency", reinterpret_cast<Elf64_Addr>(&pthread_getconcurrency)},
+    {"pthread_getcpuclockid", reinterpret_cast<Elf64_Addr>(&pthread_getcpuclockid)},
     {"pthread_getname_np", reinterpret_cast<Elf64_Addr>(&pthread_getname_np)},
     {"pthread_getspecific", reinterpret_cast<Elf64_Addr>(&pthread_getspecific)},
     {"pthread_getspecific", reinterpret_cast<Elf64_Addr>(&pthread_getspecific)},
@@ -978,6 +1014,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"putwchar", reinterpret_cast<Elf64_Addr>(&putwchar)},
     {"pwrite", reinterpret_cast<Elf64_Addr>(&pwrite)},
     {"pwrite64", reinterpret_cast<Elf64_Addr>(&pwrite64)},
+    {"pwritev64v2", reinterpret_cast<Elf64_Addr>(&pwritev64v2)},
     {"qsort", reinterpret_cast<Elf64_Addr>(&qsort)},
     {"qsort_r", reinterpret_cast<Elf64_Addr>(&qsort_r)},
     {"raise", reinterpret_cast<Elf64_Addr>(&raise)},
@@ -1031,10 +1068,14 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"sched_getaffinity", reinterpret_cast<Elf64_Addr>(&sched_getaffinity)},
     {"sched_getparam", reinterpret_cast<Elf64_Addr>(&sched_getparam)},
     {"sched_getscheduler", reinterpret_cast<Elf64_Addr>(&sched_getscheduler)},
+    {"sched_rr_get_interval", reinterpret_cast<Elf64_Addr>(&sched_rr_get_interval)},
     {"sched_setaffinity", reinterpret_cast<Elf64_Addr>(&sched_setaffinity)},
+    {"sched_setparam", reinterpret_cast<Elf64_Addr>(&sched_setparam)},
+    {"sched_setscheduler", reinterpret_cast<Elf64_Addr>(&sched_setscheduler)},
     {"sched_yield", reinterpret_cast<Elf64_Addr>(&sched_yield)},
     {"secure_getenv", reinterpret_cast<Elf64_Addr>(&secure_getenv)},
     {"select", reinterpret_cast<Elf64_Addr>(&select)},
+    {"sem_clockwait", reinterpret_cast<Elf64_Addr>(&sem_clockwait)},
     {"sem_destroy", reinterpret_cast<Elf64_Addr>(&sem_destroy)},
     {"sem_init", reinterpret_cast<Elf64_Addr>(&sem_init)},
     {"sem_post", reinterpret_cast<Elf64_Addr>(&sem_post)},
@@ -1066,11 +1107,13 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"setitimer", reinterpret_cast<Elf64_Addr>(&setitimer)},
     {"setlinebuf", reinterpret_cast<Elf64_Addr>(&setlinebuf)},
     {"setlocale", reinterpret_cast<Elf64_Addr>(&setlocale)},
+    {"setlogmask", reinterpret_cast<Elf64_Addr>(&setlogmask)},
     {"setmntent", reinterpret_cast<Elf64_Addr>(&setmntent)},
     {"setnetent", reinterpret_cast<Elf64_Addr>(&setnetent)},
     {"setnetgrent", reinterpret_cast<Elf64_Addr>(&setnetgrent)},
     {"setns", reinterpret_cast<Elf64_Addr>(&setns)},
     {"setpgid", reinterpret_cast<Elf64_Addr>(&setpgid)},
+    {"setpgrp", reinterpret_cast<Elf64_Addr>(&setpgrp)},
     {"setpriority", reinterpret_cast<Elf64_Addr>(&setpriority)},
     {"setprotoent", reinterpret_cast<Elf64_Addr>(&setprotoent)},
     {"setpwent", reinterpret_cast<Elf64_Addr>(&setpwent)},
@@ -1118,7 +1161,9 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"sigqueue", reinterpret_cast<Elf64_Addr>(&sigqueue)},
     {"sigset", reinterpret_cast<Elf64_Addr>(&sigset)},
     {"sigsuspend", reinterpret_cast<Elf64_Addr>(&sigsuspend)},
+    {"sigtimedwait", reinterpret_cast<Elf64_Addr>(&sigtimedwait)},
     {"sigwait", reinterpret_cast<Elf64_Addr>(&sigwait)},
+    {"sigwaitinfo", reinterpret_cast<Elf64_Addr>(&sigwaitinfo)},
     {"sleep", reinterpret_cast<Elf64_Addr>(&sleep)},
     {"snprintf", reinterpret_cast<Elf64_Addr>(&snprintf)},
     {"socket", reinterpret_cast<Elf64_Addr>(&socket)},
@@ -1228,6 +1273,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"towlower", reinterpret_cast<Elf64_Addr>(&towlower)},
     {"towupper", reinterpret_cast<Elf64_Addr>(&towupper)},
     {"truncate", reinterpret_cast<Elf64_Addr>(&truncate)},
+    {"truncate64", reinterpret_cast<Elf64_Addr>(&truncate64)},
     {"tsearch", reinterpret_cast<Elf64_Addr>(&tsearch)},
     {"ttyname", reinterpret_cast<Elf64_Addr>(&ttyname)},
     {"ttyname_r", reinterpret_cast<Elf64_Addr>(&ttyname_r)},
@@ -1268,18 +1314,22 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"warn", reinterpret_cast<Elf64_Addr>(&warn)},
     {"warnx", reinterpret_cast<Elf64_Addr>(&warnx)},
     {"wcrtomb", reinterpret_cast<Elf64_Addr>(&wcrtomb)},
+    {"wcscat", reinterpret_cast<Elf64_Addr>(&wcscat)},
     {"wcschr", reinterpret_cast<Elf64_Addr>(&wcschr_c)},
     {"wcscmp", reinterpret_cast<Elf64_Addr>(&wcscmp)},
     {"wcscoll", reinterpret_cast<Elf64_Addr>(&wcscoll)},
     {"wcscpy", reinterpret_cast<Elf64_Addr>(&wcscpy)},
     {"wcscspn", reinterpret_cast<Elf64_Addr>(&wcscspn)},
     {"wcsdup", reinterpret_cast<Elf64_Addr>(&wcsdup)},
+    {"wcsftime", reinterpret_cast<Elf64_Addr>(&wcsftime)},
     {"wcslen", reinterpret_cast<Elf64_Addr>(&wcslen)},
+    {"wcsncat", reinterpret_cast<Elf64_Addr>(&wcsncat)},
     {"wcsncmp", reinterpret_cast<Elf64_Addr>(&wcsncmp)},
     {"wcsncpy", reinterpret_cast<Elf64_Addr>(&wcsncpy)},
     {"wcsnlen", reinterpret_cast<Elf64_Addr>(&wcsnlen)},
     {"wcsnrtombs", reinterpret_cast<Elf64_Addr>(&wcsnrtombs)},
     {"wcspbrk", reinterpret_cast<Elf64_Addr>(&wcspbrk_c)},
+    {"wcsrchr", reinterpret_cast<Elf64_Addr>(&wcsrchr_c)},
     {"wcsrtombs", reinterpret_cast<Elf64_Addr>(&wcsrtombs)},
     {"wcsstr", reinterpret_cast<Elf64_Addr>(&wcsstr_c)},
     {"wcstok", reinterpret_cast<Elf64_Addr>(&wcstok)},

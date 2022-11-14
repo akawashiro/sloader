@@ -18,4 +18,7 @@ SLOADER_LIBRARY_PATH=/home/akira/sloader/glibc-install/lib ./build/sloader ./bui
 ```
 
 ## TODO
-- arguments
+- Speed
+- Tests
+    - Change ld-linux.so in Docker container
+- Link libc statically

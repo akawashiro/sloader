@@ -566,8 +566,9 @@ Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
     }
 
     // Workaround for TLS variable in libc.so such as errno
-    if(name == "errno"){
-        return (reinterpret_cast<const char*>(sloader_dummy_to_secure_tls_space) + 4096 - reinterpret_cast<const char*>(&errno));
+    if(libc_mapping::sloader_libc_tls_variables.find(name) != libc_mapping::sloader_libc_tls_variables.end()){
+        const char* addr = libc_mapping::sloader_libc_tls_variables[name];
+        return (reinterpret_cast<const char*>(sloader_dummy_to_secure_tls_space) + 4096 - addr);
     }
     LOG(FATAL) << "Cannot find " << name;
 }

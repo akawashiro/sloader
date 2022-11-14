@@ -230,6 +230,12 @@ DEFINE_DUMMY_FUN(__resolv_context_put)
 DEFINE_DUMMY_FUN(__res_get_nsaddr)
 DEFINE_DUMMY_FUN(__res_iclose)
 
+std::map<std::string, const char*> sloader_libc_tls_variables = {
+    {"errno", reinterpret_cast<const char*>(&errno)},
+    {"__h_errno", reinterpret_cast<const char*>(&h_errno)},
+    {"__resp", reinterpret_cast<const char*>(&_res)},
+};
+
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
     // sloader dummy functions
     {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_compress_begin)},

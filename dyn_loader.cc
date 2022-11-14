@@ -259,7 +259,7 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
     Elf64_Addr base_addr = 0x40'0000;
     binaries_.emplace_back(ELFBinary(main_path));
 
-    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/dev/null" : std::getenv("SLOADER_MAP_FILE"));
+    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
     binaries_.back().Load(base_addr, map_file);
     base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 

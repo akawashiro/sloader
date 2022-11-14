@@ -125,7 +125,6 @@ const char* (*strrchr_c)(const char*, int) = strrchr;
 const void* (*rawmemchr_c)(const void*, int) = rawmemchr;
 const wchar_t* (*wmemchr_c)(const wchar_t*, wchar_t, size_t) = wmemchr;
 const void* (*memchr_c)(const void*, int, size_t) = memchr;
-const void* (*memrchr_c)(const void*, int, size_t) = memrchr;
 const char* (*strstr_c)(const char*, const char*) = strstr;
 const char* (*strpbrk_c)(const char*, const char*) = strpbrk;
 double (*frexp_c)(double, int*) = frexp;
@@ -134,9 +133,27 @@ const char* (*strchrnul_c)(const char*, int) = strchrnul;
 const char* (*strcasestr_c)(const char* haystack, const char* needle) = strcasestr;
 double (*modf_c)(double x, double* iptr) = modf;
 const char* (*rindex_c)(const char* s, int c) = rindex;
-const wchar_t* (*wcschr_c)(const wchar_t* string, wchar_t character) = wcschr;
 const wchar_t* (*wcsstr_c)(const wchar_t* dest, const wchar_t* src) = wcsstr;
 const wchar_t* (*wcspbrk_c)(const wchar_t* wcs1, const wchar_t* wcs2) = wcspbrk;
+
+// TODO: I don't know why these functions need dummy definition not casts of function pointers.
+// const wchar_t* (*wcschr_c)(const wchar_t* string, wchar_t character) = wcschr;
+const wchar_t* wcschr_c(const wchar_t* string, wchar_t character) {
+    // printf("wcschr_c: string=%p wc=%d\n", string, character);
+    return wcschr(string, character);
+}
+
+// const wchar_t* (*wcsrchr_c)(const wchar_t *wcs, wchar_t wc) = wcsrchr;
+const wchar_t* wcsrchr_c(const wchar_t* wcs, wchar_t wc) {
+    // printf("wcsrchr_c: wcs=%p wc=%d\n", wcs, wc);
+    return wcsrchr(wcs, wc);
+}
+
+// const void* (*memrchr_c)(const void*, int, size_t) = memrchr;
+const void* memrchr_c(const void* s, int c, size_t n) {
+    // printf("memrchr_c: s=%p c=%d n=%zu\n", s, c, n);
+    return memchr(s, c, n);
+}
 
 int sloader_register_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void), void* dso_handle) {
     return pthread_atfork(prepare, parent, child);

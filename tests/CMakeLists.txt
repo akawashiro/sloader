@@ -179,6 +179,10 @@ add_test(NAME test_python3_torch_ones
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
                  ${CMAKE_BINARY_DIR}/sloader python3 ${CMAKE_CURRENT_SOURCE_DIR}/torch_ones.py)
 
+add_test(NAME test_bash_plus
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader bash ${CMAKE_CURRENT_SOURCE_DIR}/one_plus_one.sh)
+
 set_tests_properties(
     test_gcc
     test_rustc

@@ -179,9 +179,13 @@ add_test(NAME test_python3_torch_ones
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
                  ${CMAKE_BINARY_DIR}/sloader python3 ${CMAKE_CURRENT_SOURCE_DIR}/torch_ones.py)
 
-add_test(NAME test_bash_plus
-         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-                 ${CMAKE_BINARY_DIR}/sloader bash ${CMAKE_CURRENT_SOURCE_DIR}/one_plus_one.sh)
+add_test(name test_bash_plus
+         command python3 ${cmake_current_source_dir}/compare_stdout.py
+                 ${cmake_binary_dir}/sloader bash ${cmake_current_source_dir}/one_plus_one.sh)
+
+add_test(name test_curl
+         command python3 ${cmake_current_source_dir}/compare_stdout.py
+                 ${cmake_binary_dir}/sloader curl -s www.example.com)
 
 set_tests_properties(
     test_gcc

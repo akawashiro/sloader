@@ -88,6 +88,7 @@
 #include <sys/statvfs.h>
 #include <sys/syscall.h>
 #include <sys/sysinfo.h>
+#include <sys/sysmacros.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
 #include <sys/times.h>
@@ -153,6 +154,18 @@ const wchar_t* wcsrchr_c(const wchar_t* wcs, wchar_t wc) {
 const void* memrchr_c(const void* s, int c, size_t n) {
     // printf("memrchr_c: s=%p c=%d n=%zu\n", s, c, n);
     return memchr(s, c, n);
+}
+
+void* sloader_dlsym(void* handle, const char* symbol) {
+    printf("sloader_dlsym: handle=%p symbol=%s\n", handle, symbol);
+    exit(10);
+    return dlsym(handle, symbol);
+}
+
+void* sloader_dlvsym(void* handle, char* symbol, char* version) {
+    printf("sloader_dlvsym: handle=%p symbol=%s version=%s\n", handle, symbol, version);
+    exit(10);
+    return dlvsym(handle, symbol, version);
 }
 
 int sloader_register_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void), void* dso_handle) {
@@ -411,6 +424,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"aligned_alloc", reinterpret_cast<Elf64_Addr>(&aligned_alloc)},
     {"alphasort", reinterpret_cast<Elf64_Addr>(&alphasort)},
     {"alphasort64", reinterpret_cast<Elf64_Addr>(&alphasort64)},
+    {"argp_err_exit_status", reinterpret_cast<Elf64_Addr>(&argp_err_exit_status)},
     {"argp_help", reinterpret_cast<Elf64_Addr>(&argp_help)},
     {"argp_parse", reinterpret_cast<Elf64_Addr>(&argp_parse)},
     {"argz_create_sep", reinterpret_cast<Elf64_Addr>(&argz_create_sep)},
@@ -428,6 +442,11 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"bind", reinterpret_cast<Elf64_Addr>(&bind)},
     {"bind_textdomain_codeset", reinterpret_cast<Elf64_Addr>(&bind_textdomain_codeset)},
     {"bindtextdomain", reinterpret_cast<Elf64_Addr>(&bindtextdomain)},
+    {"bsearch", reinterpret_cast<Elf64_Addr>(&bsearch)},
+    {"bsearch", reinterpret_cast<Elf64_Addr>(&bsearch)},
+    {"bsearch", reinterpret_cast<Elf64_Addr>(&bsearch)},
+    {"bsearch", reinterpret_cast<Elf64_Addr>(&bsearch)},
+    {"bsearch", reinterpret_cast<Elf64_Addr>(&bsearch)},
     {"btowc", reinterpret_cast<Elf64_Addr>(&btowc)},
     {"calloc", reinterpret_cast<Elf64_Addr>(&calloc)},
     {"canonicalize_file_name", reinterpret_cast<Elf64_Addr>(&canonicalize_file_name)},
@@ -476,13 +495,18 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"dlclose", reinterpret_cast<Elf64_Addr>(&dlclose)},
     {"dlerror", reinterpret_cast<Elf64_Addr>(&dlerror)},
     {"dlopen", reinterpret_cast<Elf64_Addr>(&dlopen)},
-    {"dlsym", reinterpret_cast<Elf64_Addr>(&dlsym)},
+    {"dlsym", reinterpret_cast<Elf64_Addr>(&sloader_dlsym)},
+    {"dlvsym", reinterpret_cast<Elf64_Addr>(&sloader_dlvsym)},
     {"dn_expand", reinterpret_cast<Elf64_Addr>(&dn_expand)},
     {"dn_skipname", reinterpret_cast<Elf64_Addr>(&dn_skipname)},
     {"dngettext", reinterpret_cast<Elf64_Addr>(&dngettext)},
     {"dup", reinterpret_cast<Elf64_Addr>(&dup)},
     {"dup2", reinterpret_cast<Elf64_Addr>(&dup2)},
     {"dup3", reinterpret_cast<Elf64_Addr>(&dup3)},
+    {"duplocale", reinterpret_cast<Elf64_Addr>(&duplocale)},
+    {"duplocale", reinterpret_cast<Elf64_Addr>(&duplocale)},
+    {"duplocale", reinterpret_cast<Elf64_Addr>(&duplocale)},
+    {"duplocale", reinterpret_cast<Elf64_Addr>(&duplocale)},
     {"eaccess", reinterpret_cast<Elf64_Addr>(&eaccess)},
     {"endaliasent", reinterpret_cast<Elf64_Addr>(&endaliasent)},
     {"endgrent", reinterpret_cast<Elf64_Addr>(&endgrent)},
@@ -719,6 +743,21 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"globfree64", reinterpret_cast<Elf64_Addr>(&globfree64)},
     {"gmtime", reinterpret_cast<Elf64_Addr>(&gmtime)},
     {"gmtime_r", reinterpret_cast<Elf64_Addr>(&gmtime_r)},
+    {"gnu_dev_major", reinterpret_cast<Elf64_Addr>(&gnu_dev_major)},
+    {"gnu_dev_major", reinterpret_cast<Elf64_Addr>(&gnu_dev_major)},
+    {"gnu_dev_major", reinterpret_cast<Elf64_Addr>(&gnu_dev_major)},
+    {"gnu_dev_major", reinterpret_cast<Elf64_Addr>(&gnu_dev_major)},
+    {"gnu_dev_major", reinterpret_cast<Elf64_Addr>(&gnu_dev_major)},
+    {"gnu_dev_makedev", reinterpret_cast<Elf64_Addr>(&gnu_dev_makedev)},
+    {"gnu_dev_makedev", reinterpret_cast<Elf64_Addr>(&gnu_dev_makedev)},
+    {"gnu_dev_makedev", reinterpret_cast<Elf64_Addr>(&gnu_dev_makedev)},
+    {"gnu_dev_makedev", reinterpret_cast<Elf64_Addr>(&gnu_dev_makedev)},
+    {"gnu_dev_makedev", reinterpret_cast<Elf64_Addr>(&gnu_dev_makedev)},
+    {"gnu_dev_minor", reinterpret_cast<Elf64_Addr>(&gnu_dev_minor)},
+    {"gnu_dev_minor", reinterpret_cast<Elf64_Addr>(&gnu_dev_minor)},
+    {"gnu_dev_minor", reinterpret_cast<Elf64_Addr>(&gnu_dev_minor)},
+    {"gnu_dev_minor", reinterpret_cast<Elf64_Addr>(&gnu_dev_minor)},
+    {"gnu_dev_minor", reinterpret_cast<Elf64_Addr>(&gnu_dev_minor)},
     {"gnu_get_libc_version", reinterpret_cast<Elf64_Addr>(&gnu_get_libc_version)},
     {"grantpt", reinterpret_cast<Elf64_Addr>(&grantpt)},
     {"group_member", reinterpret_cast<Elf64_Addr>(&group_member)},
@@ -966,6 +1005,10 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"pthread_key_create", reinterpret_cast<Elf64_Addr>(&pthread_key_create)},
     {"pthread_key_delete", reinterpret_cast<Elf64_Addr>(&pthread_key_delete)},
     {"pthread_kill", reinterpret_cast<Elf64_Addr>(&pthread_kill)},
+    {"pthread_mutex_consistent", reinterpret_cast<Elf64_Addr>(&pthread_mutex_consistent)},
+    {"pthread_mutex_consistent", reinterpret_cast<Elf64_Addr>(&pthread_mutex_consistent)},
+    {"pthread_mutex_consistent", reinterpret_cast<Elf64_Addr>(&pthread_mutex_consistent)},
+    {"pthread_mutex_consistent", reinterpret_cast<Elf64_Addr>(&pthread_mutex_consistent)},
     {"pthread_mutex_destroy", reinterpret_cast<Elf64_Addr>(&pthread_mutex_destroy)},
     {"pthread_mutex_init", reinterpret_cast<Elf64_Addr>(&pthread_mutex_init)},
     {"pthread_mutex_lock", reinterpret_cast<Elf64_Addr>(&pthread_mutex_lock)},
@@ -975,6 +1018,10 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"pthread_mutexattr_destroy", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_destroy)},
     {"pthread_mutexattr_init", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_init)},
     {"pthread_mutexattr_setpshared", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_setpshared)},
+    {"pthread_mutexattr_setrobust", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_setrobust)},
+    {"pthread_mutexattr_setrobust", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_setrobust)},
+    {"pthread_mutexattr_setrobust", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_setrobust)},
+    {"pthread_mutexattr_setrobust", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_setrobust)},
     {"pthread_mutexattr_settype", reinterpret_cast<Elf64_Addr>(&pthread_mutexattr_settype)},
     {"pthread_once", reinterpret_cast<Elf64_Addr>(&pthread_once)},
     {"pthread_rwlock_destroy", reinterpret_cast<Elf64_Addr>(&pthread_rwlock_destroy)},

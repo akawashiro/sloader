@@ -27,6 +27,7 @@ add_subdirectory(initial_exec)
 add_subdirectory(ls)
 add_subdirectory(print_args)
 add_subdirectory(errno)
+add_subdirectory(dlopen)
 
 # GNU Coreutils tests
 add_test(

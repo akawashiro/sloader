@@ -27,6 +27,7 @@ add_subdirectory(initial_exec)
 add_subdirectory(ls)
 add_subdirectory(print_args)
 add_subdirectory(errno)
+add_subdirectory(dlopen)
 
 # GNU Coreutils tests
 add_test(
@@ -175,9 +176,25 @@ add_test(NAME test_python3_hello
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
                  ${CMAKE_BINARY_DIR}/sloader python3 ${CMAKE_CURRENT_SOURCE_DIR}/hello.py)
 
+add_test(NAME test_python3_torch_ones
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader python3 ${CMAKE_CURRENT_SOURCE_DIR}/torch_ones.py)
+
+add_test(NAME test_bash_plus
+         COMMAND python3 ${cmake_current_source_dir}/compare_stdout.py
+                 ${cmake_binary_dir}/sloader bash ${cmake_current_source_dir}/one_plus_one.sh)
+
+add_test(NAME test_curl
+         COMMAND python3 ${cmake_current_source_dir}/compare_stdout.py
+                 ${cmake_binary_dir}/sloader curl -s www.example.com)
+
 set_tests_properties(
     test_gcc
     test_rustc
+    test_top
+    test_python3_torch_ones
+    test_bash_plus
+    test_curl
     PROPERTIES WILL_FAIL TRUE)
 
 if(CUSTOM_LIBC_PATH)

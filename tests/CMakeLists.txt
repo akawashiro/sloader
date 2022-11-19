@@ -191,6 +191,10 @@ add_test(NAME test_curl
 set_tests_properties(
     test_gcc
     test_rustc
+    test_top
+    test_python3_torch_ones
+    test_bash_plus
+    test_curl
     PROPERTIES WILL_FAIL TRUE)
 
 if(CUSTOM_LIBC_PATH)

@@ -156,9 +156,19 @@ const void* memrchr_c(const void* s, int c, size_t n) {
     return memchr(s, c, n);
 }
 
+void *sloader_dlopen(const char *filename, int flags){
+    printf("sloader_dlopen: filename=%s flags=%d\n", filename, flags);
+    void* r = dlopen(filename, flags);
+    if(r == NULL){
+        printf("sloader_dlopen failed\n");
+    }
+    printf("r=%lu errno=%d\n", reinterpret_cast<unsigned long>(r), errno);
+    return r;
+}
+
+
 void* sloader_dlsym(void* handle, const char* symbol) {
     printf("sloader_dlsym: handle=%p symbol=%s\n", handle, symbol);
-    exit(10);
     return dlsym(handle, symbol);
 }
 
@@ -494,7 +504,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"dladdr", reinterpret_cast<Elf64_Addr>(&dladdr)},
     {"dlclose", reinterpret_cast<Elf64_Addr>(&dlclose)},
     {"dlerror", reinterpret_cast<Elf64_Addr>(&dlerror)},
-    {"dlopen", reinterpret_cast<Elf64_Addr>(&dlopen)},
+    {"dlopen", reinterpret_cast<Elf64_Addr>(&sloader_dlopen)},
     {"dlsym", reinterpret_cast<Elf64_Addr>(&sloader_dlsym)},
     {"dlvsym", reinterpret_cast<Elf64_Addr>(&sloader_dlvsym)},
     {"dn_expand", reinterpret_cast<Elf64_Addr>(&dn_expand)},

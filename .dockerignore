@@ -3,3 +3,5 @@ glibc
 glibc-install
 glibc-build
 *.data
+chibicc
+ninja

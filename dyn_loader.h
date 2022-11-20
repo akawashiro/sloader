@@ -91,7 +91,10 @@ private:
     const std::vector<std::string> args_;
     const std::vector<std::string> envs_;
     std::vector<ELFBinary> binaries_;
+    Elf64_Addr next_base_addr_;
+    std::set<std::string> loaded_;
 
+    void LoadDependingLibs(const std::filesystem::path& root_path);
     void Relocate();
     void __attribute__((noinline)) ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry);
     std::optional<std::pair<size_t, size_t>> SearchSym(const std::string& name, bool skip_main);

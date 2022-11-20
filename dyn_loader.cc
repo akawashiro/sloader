@@ -16,6 +16,7 @@
 #include <optional>
 
 #include "libc_mapping.h"
+#include "utils.h"
 
 extern thread_local unsigned long sloader_dummy_to_secure_tls_space[];
 extern unsigned long sloader_tls_offset;
@@ -90,6 +91,7 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
 }
 
 void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file) {
+    LOG(INFO) << LOG_BITS(base_addr);
     base_addr_ = base_addr;
     end_addr_ = base_addr_;
 
@@ -292,15 +294,18 @@ std::filesystem::path FindLibrary(std::string library_name, std::optional<std::f
     std::abort();
 }
 
-// TODO: Although this functions loads binaries now, I want to make this
-// function pure. I.e, just returns vector of path.
-std::pair<std::vector<ELFBinary>, Elf64_Addr> DependLibs(const ELFBinary& root, Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file) {
-    std::queue<std::tuple<std::string, std::optional<std::filesystem::path>, std::optional<std::filesystem::path>>> queue;
-    std::set<std::string> loaded;
-    std::vector<ELFBinary> libs;
+}  // namespace
 
-    for (const auto& n : root.neededs()) {
-        queue.push(std::make_tuple(n, root.runpath(), root.rpath()));
+void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
+    binaries_.emplace_back(ELFBinary(root_path));
+    binaries_.back().Load(next_base_addr_, map_file_);
+    loaded_.insert(root_path.filename());
+    next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+
+    std::queue<std::tuple<std::string, std::optional<std::filesystem::path>, std::optional<std::filesystem::path>>> queue;
+
+    for (const auto& n : binaries_.back().neededs()) {
+        queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
     }
 
     // Search depending sos.
@@ -308,8 +313,8 @@ std::pair<std::vector<ELFBinary>, Elf64_Addr> DependLibs(const ELFBinary& root, 
         const auto [library_name, runpath, rpath] = queue.front();
         queue.pop();
 
-        if (loaded.count(library_name) != 0) continue;
-        loaded.insert(library_name);
+        if (loaded_.count(library_name) != 0) continue;
+        loaded_.insert(library_name);
 
         // Skip dynamic loader and libc.so
         if (library_name.find("ld-linux") != std::string::npos || library_name.find("libc.so") != std::string::npos) {
@@ -318,32 +323,21 @@ std::pair<std::vector<ELFBinary>, Elf64_Addr> DependLibs(const ELFBinary& root, 
         }
 
         const auto library_path = FindLibrary(library_name, runpath, rpath);
-        libs.emplace_back(ELFBinary(library_path));
-        libs.back().Load(base_addr, map_file);
-        base_addr = (libs.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
-        for (const auto& n : libs.back().neededs()) {
-            queue.push(std::make_tuple(n, libs.back().runpath(), libs.back().rpath()));
+        binaries_.emplace_back(ELFBinary(library_path));
+        binaries_.back().Load(next_base_addr_, map_file_);
+        next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+        for (const auto& n : binaries_.back().neededs()) {
+            queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
         }
     }
-
-    return std::make_pair(libs, base_addr);
 }
-}  // namespace
 
 DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs)
-    : main_path_(main_path), args_(args), envs_(envs) {
-    Elf64_Addr base_addr = 0x40'0000;
-    binaries_.emplace_back(ELFBinary(main_path));
-
+    : main_path_(main_path), args_(args), envs_(envs), next_base_addr_(0x40'0000) {
     map_file_ =
         std::make_shared<std::ofstream>(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
-    binaries_.back().Load(base_addr, map_file_);
-    base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 
-    auto p = DependLibs(binaries_.back(), base_addr, map_file_);
-    std::vector<ELFBinary> depending_sos = p.first;
-    base_addr = p.second;
-    binaries_.insert(binaries_.end(), depending_sos.begin(), depending_sos.end());
+    LoadDependingLibs(main_path_);
 
     Relocate();
 

@@ -9,7 +9,7 @@ add_test(
   COMMAND
     python3 ${CMAKE_SOURCE_DIR}/tests/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader
     ${CMAKE_CURRENT_BINARY_DIR}/dlopen2_main
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(
     dlopen2_test
     PROPERTIES WILL_FAIL TRUE)

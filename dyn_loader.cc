@@ -1,6 +1,7 @@
 #include "dyn_loader.h"
 
 #include <asm/prctl.h>
+#include <elf.h>
 #include <fcntl.h>
 #include <sys/auxv.h>
 #include <sys/mman.h>
@@ -8,7 +9,9 @@
 #include <sys/stat.h>
 
 #include <cstring>
+#include <filesystem>
 #include <map>
+#include <optional>
 
 #include "libc_mapping.h"
 
@@ -127,9 +130,9 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
         CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr);
         CHECK_LE(ph.p_vaddr + base_addr + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
         LOG(INFO) << LOG_BITS(mmap_start) << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ + ph.p_offset)) << LOG_BITS(ph.p_filesz);
-        map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16)
-                 << " " << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-"
-                 << HexString(mmap_end, 16) << std::endl;
+        map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16) << " "
+                 << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
+                 << std::endl;
         memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr), file_base_addr_ + ph.p_offset, ph.p_filesz);
     }
     LOG(INFO) << "Load end";
@@ -580,7 +583,7 @@ Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
     }
 
     // Workaround for TLS variable in libc.so such as errno
-    if(libc_mapping::sloader_libc_tls_variables.find(name) != libc_mapping::sloader_libc_tls_variables.end()){
+    if (libc_mapping::sloader_libc_tls_variables.find(name) != libc_mapping::sloader_libc_tls_variables.end()) {
         const char* addr = libc_mapping::sloader_libc_tls_variables[name];
         return (reinterpret_cast<const char*>(sloader_dummy_to_secure_tls_space) + 4096 - addr);
     }

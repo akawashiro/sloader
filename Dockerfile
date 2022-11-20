@@ -2,8 +2,8 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y ninja-build cmake gcc g++ git python3 python3-distutils python3-dev python3-pip nasm clang-format libcap-dev tmux zsh neovim
 RUN pip3 install torch==1.13.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-COPY . /sold
-WORKDIR /sold
+COPY . /sloader
+WORKDIR /sloader
 RUN ./build_chibicc.sh
 # TODO
 # RUN ./run-format.sh

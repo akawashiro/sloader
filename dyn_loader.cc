@@ -254,20 +254,48 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
     return symtabs()[symbol_index].st_value + base_addr();
 }
 
-DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs)
-    : main_path_(main_path), args_(args), envs_(envs) {
-    Elf64_Addr base_addr = 0x40'0000;
-    binaries_.emplace_back(ELFBinary(main_path));
+namespace {
+std::filesystem::path FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
+                                  std::optional<std::filesystem::path> rpath) {
+    std::vector<std::filesystem::path> library_directory;
 
-    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
-    binaries_.back().Load(base_addr, map_file);
-    base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+    std::string sloader_library_path(std::getenv("SLOADER_LIBRARY_PATH") == nullptr ? "" : std::getenv("SLOADER_LIBRARY_PATH"));
+    if (!sloader_library_path.empty()) {
+        library_directory.emplace_back(sloader_library_path);
+    }
 
+    if (runpath) {
+        library_directory.emplace_back(runpath.value());
+    }
+    if (rpath) {
+        library_directory.emplace_back(rpath.value());
+    }
+    const auto ldsoconfs = read_ldsoconf();
+    library_directory.insert(library_directory.end(), ldsoconfs.begin(), ldsoconfs.end());
+    library_directory.emplace_back("/lib");
+    library_directory.emplace_back("/usr/lib");
+    library_directory.emplace_back("/usr/lib64");
+
+    for (const auto& d : library_directory) {
+        std::filesystem::path p = d / library_name;
+        if (std::filesystem::exists(p)) {
+            LOG(INFO) << LOG_KEY(p);
+            return p;
+        }
+    }
+    LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
+    std::abort();
+}
+
+// TODO: Although this functions loads binaries now, I want to make this
+// function pure. I.e, just returns vector of path.
+std::pair<std::vector<ELFBinary>, Elf64_Addr> DependLibs(const ELFBinary& root, Elf64_Addr base_addr, std::ofstream& map_file) {
     std::queue<std::tuple<std::string, std::optional<std::filesystem::path>, std::optional<std::filesystem::path>>> queue;
     std::set<std::string> loaded;
+    std::vector<ELFBinary> libs;
 
-    for (const auto& n : binaries_.back().neededs()) {
-        queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
+    for (const auto& n : root.neededs()) {
+        queue.push(std::make_tuple(n, root.runpath(), root.rpath()));
     }
 
     // Search depending sos.
@@ -285,13 +313,31 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
         }
 
         const auto library_path = FindLibrary(library_name, runpath, rpath);
-        binaries_.emplace_back(ELFBinary(library_path));
-        binaries_.back().Load(base_addr, map_file);
-        base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
-        for (const auto& n : binaries_.back().neededs()) {
-            queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
+        libs.emplace_back(ELFBinary(library_path));
+        libs.back().Load(base_addr, map_file);
+        base_addr = (libs.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+        for (const auto& n : libs.back().neededs()) {
+            queue.push(std::make_tuple(n, libs.back().runpath(), libs.back().rpath()));
         }
     }
+
+    return std::make_pair(libs, base_addr);
+}
+}  // namespace
+
+DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs)
+    : main_path_(main_path), args_(args), envs_(envs) {
+    Elf64_Addr base_addr = 0x40'0000;
+    binaries_.emplace_back(ELFBinary(main_path));
+
+    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
+    binaries_.back().Load(base_addr, map_file);
+    base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+
+    auto p = DependLibs(binaries_.back(), base_addr, map_file);
+    std::vector<ELFBinary> depending_sos = p.first;
+    base_addr = p.second;
+    binaries_.insert(binaries_.end(), depending_sos.begin(), depending_sos.end());
 
     Relocate();
 
@@ -482,38 +528,6 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
 
     free(stack);
     LOG(INFO) << "Execute end";
-}
-
-std::filesystem::path DynLoader::FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
-                                             std::optional<std::filesystem::path> rpath) {
-    std::vector<std::filesystem::path> library_directory;
-
-    std::string sloader_library_path(std::getenv("SLOADER_LIBRARY_PATH") == nullptr ? "" : std::getenv("SLOADER_LIBRARY_PATH"));
-    if (!sloader_library_path.empty()) {
-        library_directory.emplace_back(sloader_library_path);
-    }
-
-    if (runpath) {
-        library_directory.emplace_back(runpath.value());
-    }
-    if (rpath) {
-        library_directory.emplace_back(rpath.value());
-    }
-    const auto ldsoconfs = read_ldsoconf();
-    library_directory.insert(library_directory.end(), ldsoconfs.begin(), ldsoconfs.end());
-    library_directory.emplace_back("/lib");
-    library_directory.emplace_back("/usr/lib");
-    library_directory.emplace_back("/usr/lib64");
-
-    for (const auto& d : library_directory) {
-        std::filesystem::path p = d / library_name;
-        if (std::filesystem::exists(p)) {
-            LOG(INFO) << LOG_KEY(p);
-            return p;
-        }
-    }
-    LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
-    std::abort();
 }
 
 // Search the first defined symbol

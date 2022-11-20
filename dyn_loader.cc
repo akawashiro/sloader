@@ -336,11 +336,11 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
     : main_path_(main_path), args_(args), envs_(envs), next_base_addr_(0x40'0000) {
     map_file_ =
         std::make_shared<std::ofstream>(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
+}
 
+void DynLoader::Run() {
     LoadDependingLibs(main_path_);
-
     Relocate();
-
     Execute(args_, envs_);
 }
 
@@ -535,7 +535,7 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
 // TODO: Consider version information
 // TODO: Return ELFBinary and Elf64_Sym theirselves
 std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(const std::string& name, bool skip_main = false) {
-    LOG(INFO) << "========== SearchSym " << name << "==========";
+    LOG(INFO) << "========== SearchSym " << name << " ==========";
     // binaries_[0] is the executable itself. We should skip it.
     // TODO: Add reference here.
     for (size_t i = skip_main ? 1 : 0; i < binaries_.size(); i++) {
@@ -590,6 +590,8 @@ Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
 void DynLoader::Relocate() {
     for (const auto& bin : binaries_) {
         LOG(INFO) << bin.path();
+        if (relocated_[bin.path()]) continue;
+        relocated_[bin.path()] = true;
 
         std::vector<Elf64_Rela> relas = bin.pltrelas();
         // TODO: Use std::copy?

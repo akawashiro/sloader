@@ -78,6 +78,7 @@ int main(int argc, char* const argv[], char** envp) {
         exec_loader->Unload();
     } else if (etype == ET_DYN) {
         InitializeDynLoader(fullpath, envs, args);
+        GetDynLoader()->Run();
     } else {
         LOG(FATAL) << "Unsupported etype = " << LOG_KEY(etype);
     }

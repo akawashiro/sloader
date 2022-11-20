@@ -3,27 +3,27 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <elf.h>
 #include <glob.h>
 
-#include "sloader_dl.h"
 #include "dyn_loader.h"
+#include "sloader_dl.h"
 #include "utils.h"
 
 void* sloader_dlopen(const char* filename, int flags) {
-    auto b = ELFBinary(filename);
-    LOG(INFO) << LOG_KEY(b.filename());
-    printf("sloader_dlopen: filename=%s flags=%d\n", filename, flags);
-    void* r = dlopen(filename, flags);
-    if (r == NULL) {
-        printf("sloader_dlopen failed\n");
-    }
-    printf("r=%lu errno=%d\n", reinterpret_cast<unsigned long>(r), errno);
-    return r;
+    LOG(INFO) << "sloader_dlopen" << LOG_KEY(filename) << LOG_KEY(flags);
+    GetDynLoader()->LoadDependingLibs(filename);
+    GetDynLoader()->Relocate();
+    // TODO: Functions depending on handle may fail.
+    return reinterpret_cast<void*>(0xdeadbeefdeadbeef);
 }
 
 void* sloader_dlsym(void* handle, const char* symbol) {
-    printf("sloader_dlsym: handle=%p symbol=%s\n", handle, symbol);
-    return dlsym(handle, symbol);
+    const auto opt = GetDynLoader()->SearchSym(symbol, false);
+    CHECK(opt);
+    const auto [bin_index, sym_index] = opt.value();
+    Elf64_Addr sym_addr = GetDynLoader()->binaries_[bin_index].GetSymbolAddr(sym_index);
+    return reinterpret_cast<void*>(sym_addr);
 }
 
 void* sloader_dlvsym(void* handle, char* symbol, char* version) {

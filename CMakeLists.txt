@@ -28,7 +28,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/raw_write)
 
 add_library(tls_secure tls_secure.cc)
 
-add_executable(sloader sloader.cc dyn_loader.cc libc_mapping.cc utils.cc)
+add_executable(sloader sloader.cc dyn_loader.cc libc_mapping.cc sloader_dl.cc utils.cc)
 target_link_libraries(sloader glog tls_secure)
 target_compile_options(sloader PUBLIC -Wall -Werror)
 # TODO static link fail to secure TLS space.

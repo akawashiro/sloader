@@ -1,6 +1,7 @@
 #include "dyn_loader.h"
 
 #include <asm/prctl.h>
+#include <elf.h>
 #include <fcntl.h>
 #include <sys/auxv.h>
 #include <sys/mman.h>
@@ -8,9 +9,14 @@
 #include <sys/stat.h>
 
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <map>
+#include <memory>
+#include <optional>
 
 #include "libc_mapping.h"
+#include "utils.h"
 
 extern thread_local unsigned long sloader_dummy_to_secure_tls_space[];
 extern unsigned long sloader_tls_offset;
@@ -84,7 +90,8 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     }
 }
 
-void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
+void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file) {
+    LOG(INFO) << LOG_BITS(base_addr);
     base_addr_ = base_addr;
     end_addr_ = base_addr_;
 
@@ -127,9 +134,9 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
         CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr);
         CHECK_LE(ph.p_vaddr + base_addr + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
         LOG(INFO) << LOG_BITS(mmap_start) << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ + ph.p_offset)) << LOG_BITS(ph.p_filesz);
-        map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16)
-                 << " " << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-"
-                 << HexString(mmap_end, 16) << std::endl;
+        *map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16) << " "
+                  << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
+                  << std::endl;
         memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr), file_base_addr_ + ph.p_offset, ph.p_filesz);
     }
     LOG(INFO) << "Load end";
@@ -254,17 +261,48 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
     return symtabs()[symbol_index].st_value + base_addr();
 }
 
-DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs)
-    : main_path_(main_path), args_(args), envs_(envs) {
-    Elf64_Addr base_addr = 0x40'0000;
-    binaries_.emplace_back(ELFBinary(main_path));
+namespace {
+std::filesystem::path FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
+                                  std::optional<std::filesystem::path> rpath) {
+    std::vector<std::filesystem::path> library_directory;
 
-    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
-    binaries_.back().Load(base_addr, map_file);
-    base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+    std::string sloader_library_path(std::getenv("SLOADER_LIBRARY_PATH") == nullptr ? "" : std::getenv("SLOADER_LIBRARY_PATH"));
+    if (!sloader_library_path.empty()) {
+        library_directory.emplace_back(sloader_library_path);
+    }
+
+    if (runpath) {
+        library_directory.emplace_back(runpath.value());
+    }
+    if (rpath) {
+        library_directory.emplace_back(rpath.value());
+    }
+    const auto ldsoconfs = read_ldsoconf();
+    library_directory.insert(library_directory.end(), ldsoconfs.begin(), ldsoconfs.end());
+    library_directory.emplace_back("/lib");
+    library_directory.emplace_back("/usr/lib");
+    library_directory.emplace_back("/usr/lib64");
+
+    for (const auto& d : library_directory) {
+        std::filesystem::path p = d / library_name;
+        if (std::filesystem::exists(p)) {
+            LOG(INFO) << LOG_KEY(p);
+            return p;
+        }
+    }
+    LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
+    std::abort();
+}
+
+}  // namespace
+
+void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
+    binaries_.emplace_back(ELFBinary(root_path));
+    binaries_.back().Load(next_base_addr_, map_file_);
+    loaded_.insert(root_path.filename());
+    next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 
     std::queue<std::tuple<std::string, std::optional<std::filesystem::path>, std::optional<std::filesystem::path>>> queue;
-    std::set<std::string> loaded;
 
     for (const auto& n : binaries_.back().neededs()) {
         queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
@@ -275,8 +313,8 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
         const auto [library_name, runpath, rpath] = queue.front();
         queue.pop();
 
-        if (loaded.count(library_name) != 0) continue;
-        loaded.insert(library_name);
+        if (loaded_.count(library_name) != 0) continue;
+        loaded_.insert(library_name);
 
         // Skip dynamic loader and libc.so
         if (library_name.find("ld-linux") != std::string::npos || library_name.find("libc.so") != std::string::npos) {
@@ -286,15 +324,23 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
 
         const auto library_path = FindLibrary(library_name, runpath, rpath);
         binaries_.emplace_back(ELFBinary(library_path));
-        binaries_.back().Load(base_addr, map_file);
-        base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+        binaries_.back().Load(next_base_addr_, map_file_);
+        next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
         for (const auto& n : binaries_.back().neededs()) {
             queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
         }
     }
+}
 
+DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs)
+    : main_path_(main_path), args_(args), envs_(envs), next_base_addr_(0x40'0000) {
+    map_file_ =
+        std::make_shared<std::ofstream>(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
+}
+
+void DynLoader::Run() {
+    LoadDependingLibs(main_path_);
     Relocate();
-
     Execute(args_, envs_);
 }
 
@@ -484,44 +530,12 @@ void DynLoader::Execute(std::vector<std::string> args, std::vector<std::string> 
     LOG(INFO) << "Execute end";
 }
 
-std::filesystem::path DynLoader::FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
-                                             std::optional<std::filesystem::path> rpath) {
-    std::vector<std::filesystem::path> library_directory;
-
-    std::string sloader_library_path(std::getenv("SLOADER_LIBRARY_PATH") == nullptr ? "" : std::getenv("SLOADER_LIBRARY_PATH"));
-    if (!sloader_library_path.empty()) {
-        library_directory.emplace_back(sloader_library_path);
-    }
-
-    if (runpath) {
-        library_directory.emplace_back(runpath.value());
-    }
-    if (rpath) {
-        library_directory.emplace_back(rpath.value());
-    }
-    const auto ldsoconfs = read_ldsoconf();
-    library_directory.insert(library_directory.end(), ldsoconfs.begin(), ldsoconfs.end());
-    library_directory.emplace_back("/lib");
-    library_directory.emplace_back("/usr/lib");
-    library_directory.emplace_back("/usr/lib64");
-
-    for (const auto& d : library_directory) {
-        std::filesystem::path p = d / library_name;
-        if (std::filesystem::exists(p)) {
-            LOG(INFO) << LOG_KEY(p);
-            return p;
-        }
-    }
-    LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
-    std::abort();
-}
-
 // Search the first defined symbol
 // Return pair of the index of ELFBinary and the index of the Elf64_Sym
 // TODO: Consider version information
 // TODO: Return ELFBinary and Elf64_Sym theirselves
 std::optional<std::pair<size_t, size_t>> DynLoader::SearchSym(const std::string& name, bool skip_main = false) {
-    LOG(INFO) << "========== SearchSym " << name << "==========";
+    LOG(INFO) << "========== SearchSym " << name << " ==========";
     // binaries_[0] is the executable itself. We should skip it.
     // TODO: Add reference here.
     for (size_t i = skip_main ? 1 : 0; i < binaries_.size(); i++) {
@@ -566,7 +580,7 @@ Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
     }
 
     // Workaround for TLS variable in libc.so such as errno
-    if(libc_mapping::sloader_libc_tls_variables.find(name) != libc_mapping::sloader_libc_tls_variables.end()){
+    if (libc_mapping::sloader_libc_tls_variables.find(name) != libc_mapping::sloader_libc_tls_variables.end()) {
         const char* addr = libc_mapping::sloader_libc_tls_variables[name];
         return (reinterpret_cast<const char*>(sloader_dummy_to_secure_tls_space) + 4096 - addr);
     }
@@ -576,6 +590,8 @@ Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
 void DynLoader::Relocate() {
     for (const auto& bin : binaries_) {
         LOG(INFO) << bin.path();
+        if (relocated_[bin.path()]) continue;
+        relocated_[bin.path()] = true;
 
         std::vector<Elf64_Rela> relas = bin.pltrelas();
         // TODO: Use std::copy?
@@ -693,9 +709,19 @@ void DynLoader::Relocate() {
     }
 }
 
-std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
-                                         const std::vector<std::string>& args) {
+namespace {
+std::optional<std::shared_ptr<DynLoader>> dynloader = std::nullopt;
+}
+
+void InitializeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
+                         const std::vector<std::string>& args) {
     // TODO: Remove this call
+    CHECK(dynloader == std::nullopt);
     write_sloader_dummy_to_secure_tls_space();
-    return std::make_unique<DynLoader>(main_path, args, envs);
+    dynloader = std::make_shared<DynLoader>(main_path, args, envs);
+}
+
+std::shared_ptr<DynLoader> GetDynLoader() {
+    CHECK(dynloader);
+    return *dynloader;
 }

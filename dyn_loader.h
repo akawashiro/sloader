@@ -5,9 +5,11 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <queue>
 #include <set>
+#include <map>
 #include <tuple>
 
 #include "utils.h"
@@ -15,14 +17,14 @@
 class ELFBinary {
 public:
     ELFBinary(const std::filesystem::path path);
-    void Load(Elf64_Addr base_addr, std::ofstream& map_file);
-    void ParseDynamic();
-    const std::string filename() { return path_.filename().string(); }
+    ELFBinary(const ELFBinary&) = default;
+
+    const std::string filename() const { return path_.filename().string(); }
     const Elf64_Addr GetSymbolAddr(const size_t symbol_index);
-    std::vector<std::string> neededs() { return neededs_; }
+    const std::vector<std::string> neededs() const { return neededs_; }
     const std::vector<Elf64_Sym>& symtabs() const { return symtabs_; }
-    std::optional<std::filesystem::path> runpath() { return runpath_; }
-    std::optional<std::filesystem::path> rpath() { return rpath_; }
+    const std::optional<std::filesystem::path> runpath() const { return runpath_; }
+    const std::optional<std::filesystem::path> rpath() const { return rpath_; }
     const bool has_tls() const { return has_tls_; }
     const Elf64_Phdr file_tls() const { return file_tls_; }
     const Elf64_Addr base_addr() const { return base_addr_; }
@@ -39,8 +41,12 @@ public:
     const char* strtab() const { return strtab_; }
     const Elf64_Ehdr ehdr() const { return ehdr_; }
 
+    void Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file);
+    void ParseDynamic();
+
 private:
-    const std::filesystem::path path_;
+    // To generate copy constructor, we cannot make member variables const.
+    std::filesystem::path path_;
     char* file_base_addr_;
     Elf64_Addr base_addr_ = 0;
     Elf64_Addr end_addr_ = 0;
@@ -78,20 +84,29 @@ private:
 class DynLoader {
 public:
     DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs);
-    void Execute(std::vector<std::string> args, std::vector<std::string> envs);
+    // The main function
+    void Run();
 
-private:
-    void __attribute__((noinline)) ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry);
-    std::filesystem::path FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
-                                      std::optional<std::filesystem::path> rpath);
-    std::filesystem::path main_path_;
-    const std::vector<std::string> args_;
-    const std::vector<std::string> envs_;
-    std::vector<ELFBinary> binaries_;
+    void LoadDependingLibs(const std::filesystem::path& root_path);
     void Relocate();
     std::optional<std::pair<size_t, size_t>> SearchSym(const std::string& name, bool skip_main);
+    std::vector<ELFBinary> binaries_;
+
+private:
+    std::filesystem::path main_path_;
+    std::shared_ptr<std::ofstream> map_file_;
+    const std::vector<std::string> args_;
+    const std::vector<std::string> envs_;
+    Elf64_Addr next_base_addr_;
+    std::set<std::string> loaded_;
+    std::map<std::filesystem::path, bool> relocated_;
+
+    void Execute(std::vector<std::string> args, std::vector<std::string> envs);
+    void __attribute__((noinline)) ExecuteCore(uint64_t* stack, size_t stack_num, uint64_t entry);
     Elf64_Addr TLSSymOffset(const std::string& name);
 };
 
-std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
-                                         const std::vector<std::string>& argv);
+void InitializeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
+                         const std::vector<std::string>& argv);
+
+std::shared_ptr<DynLoader> GetDynLoader();

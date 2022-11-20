@@ -707,9 +707,19 @@ void DynLoader::Relocate() {
     }
 }
 
-std::unique_ptr<DynLoader> MakeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
-                                         const std::vector<std::string>& args) {
+namespace {
+std::optional<std::shared_ptr<DynLoader>> dynloader = std::nullopt;
+}
+
+void InitializeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
+                         const std::vector<std::string>& args) {
     // TODO: Remove this call
+    CHECK(dynloader == std::nullopt);
     write_sloader_dummy_to_secure_tls_space();
-    return std::make_unique<DynLoader>(main_path, args, envs);
+    dynloader = std::make_shared<DynLoader>(main_path, args, envs);
+}
+
+std::shared_ptr<DynLoader> GetDynLoader() {
+    CHECK(dynloader);
+    return *dynloader;
 }

@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <queue>
 #include <set>
@@ -16,9 +17,8 @@ class ELFBinary {
 public:
     ELFBinary(const std::filesystem::path path);
     ELFBinary(const ELFBinary&) = default;
-    void Load(Elf64_Addr base_addr, std::ofstream& map_file);
-    void ParseDynamic();
-    const std::string filename() { return path_.filename().string(); }
+
+    const std::string filename() const { return path_.filename().string(); }
     const Elf64_Addr GetSymbolAddr(const size_t symbol_index);
     const std::vector<std::string> neededs() const { return neededs_; }
     const std::vector<Elf64_Sym>& symtabs() const { return symtabs_; }
@@ -39,6 +39,9 @@ public:
     const Elf64_Xword fini_array() const { return fini_array_; }
     const char* strtab() const { return strtab_; }
     const Elf64_Ehdr ehdr() const { return ehdr_; }
+
+    void Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file);
+    void ParseDynamic();
 
 private:
     // To generate copy constructor, we cannot make member variables const.
@@ -84,6 +87,7 @@ public:
 
 private:
     std::filesystem::path main_path_;
+    std::shared_ptr<std::ofstream> map_file_;
     const std::vector<std::string> args_;
     const std::vector<std::string> envs_;
     std::vector<ELFBinary> binaries_;
@@ -95,6 +99,6 @@ private:
 };
 
 void InitializeDynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& envs,
-                                         const std::vector<std::string>& argv);
+                         const std::vector<std::string>& argv);
 
 std::shared_ptr<DynLoader> GetDynLoader();

@@ -10,7 +10,9 @@
 
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <map>
+#include <memory>
 #include <optional>
 
 #include "libc_mapping.h"
@@ -87,7 +89,7 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     }
 }
 
-void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
+void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file) {
     base_addr_ = base_addr;
     end_addr_ = base_addr_;
 
@@ -130,9 +132,9 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::ofstream& map_file) {
         CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr);
         CHECK_LE(ph.p_vaddr + base_addr + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
         LOG(INFO) << LOG_BITS(mmap_start) << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ + ph.p_offset)) << LOG_BITS(ph.p_filesz);
-        map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16) << " "
-                 << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
-                 << std::endl;
+        *map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16) << " "
+                  << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
+                  << std::endl;
         memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr), file_base_addr_ + ph.p_offset, ph.p_filesz);
     }
     LOG(INFO) << "Load end";
@@ -292,7 +294,7 @@ std::filesystem::path FindLibrary(std::string library_name, std::optional<std::f
 
 // TODO: Although this functions loads binaries now, I want to make this
 // function pure. I.e, just returns vector of path.
-std::pair<std::vector<ELFBinary>, Elf64_Addr> DependLibs(const ELFBinary& root, Elf64_Addr base_addr, std::ofstream& map_file) {
+std::pair<std::vector<ELFBinary>, Elf64_Addr> DependLibs(const ELFBinary& root, Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file) {
     std::queue<std::tuple<std::string, std::optional<std::filesystem::path>, std::optional<std::filesystem::path>>> queue;
     std::set<std::string> loaded;
     std::vector<ELFBinary> libs;
@@ -333,11 +335,12 @@ DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<s
     Elf64_Addr base_addr = 0x40'0000;
     binaries_.emplace_back(ELFBinary(main_path));
 
-    std::ofstream map_file(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
-    binaries_.back().Load(base_addr, map_file);
+    map_file_ =
+        std::make_shared<std::ofstream>(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
+    binaries_.back().Load(base_addr, map_file_);
     base_addr = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 
-    auto p = DependLibs(binaries_.back(), base_addr, map_file);
+    auto p = DependLibs(binaries_.back(), base_addr, map_file_);
     std::vector<ELFBinary> depending_sos = p.first;
     base_addr = p.second;
     binaries_.insert(binaries_.end(), depending_sos.begin(), depending_sos.end());

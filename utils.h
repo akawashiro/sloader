@@ -25,8 +25,7 @@ std::string HexString(T* num, int length = -1) {
         length = 16;
     }
     std::stringstream ss;
-    ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length)
-       << std::hex << n;
+    ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length) << std::hex << n;
     return ss.str();
 }
 
@@ -41,13 +40,11 @@ std::string HexString(T num, int length = -1) {
         length = sizeof(T) / 2;
     }
     std::stringstream ss;
-    ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length)
-       << std::hex << +num;
+    ss << "0x" << std::uppercase << std::setfill('0') << std::setw(length) << std::hex << +num;
     return ss.str();
 }
 
-std::vector<std::string> SplitWith(std::string str,
-                                   const std::string& delimiter);
+std::vector<std::string> SplitWith(std::string str, const std::string& delimiter);
 
 std::string ShowRela(const Elf64_Rela& r);
 

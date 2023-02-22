@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <string>
 
 std::vector<std::string> SplitWith(std::string str,
                                    const std::string& delimiter) {
@@ -131,8 +132,9 @@ std::string ShowSTB(unsigned char bind) {
         case STB_HIPROC:
             return "STB_HIPROC";
         default: {
-            LOG(FATAL) << LOG_KEY(bind);
-            std::abort();
+            return std::to_string(bind);
+            // LOG(FATAL) << LOG_KEY(bind);
+            // std::abort();
         }
     }
 }

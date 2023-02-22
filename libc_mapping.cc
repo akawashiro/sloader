@@ -481,7 +481,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"dirfd", reinterpret_cast<Elf64_Addr>(&dirfd)},
     {"dirname", reinterpret_cast<Elf64_Addr>(&dirname)},
     {"dl_iterate_phdr", reinterpret_cast<Elf64_Addr>(&dl_iterate_phdr)},
-    {"dladdr", reinterpret_cast<Elf64_Addr>(&dladdr)},
+    {"dladdr", reinterpret_cast<Elf64_Addr>(&sloader_dladdr)},
     {"dlclose", reinterpret_cast<Elf64_Addr>(&dlclose)},
     {"dlerror", reinterpret_cast<Elf64_Addr>(&dlerror)},
     {"dlopen", reinterpret_cast<Elf64_Addr>(&sloader_dlopen)},

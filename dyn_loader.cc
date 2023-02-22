@@ -261,7 +261,6 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
     return symtabs()[symbol_index].st_value + base_addr();
 }
 
-namespace {
 std::filesystem::path FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
                                   std::optional<std::filesystem::path> rpath) {
     std::vector<std::filesystem::path> library_directory;
@@ -282,19 +281,30 @@ std::filesystem::path FindLibrary(std::string library_name, std::optional<std::f
     library_directory.emplace_back("/lib");
     library_directory.emplace_back("/usr/lib");
     library_directory.emplace_back("/usr/lib64");
+    library_directory.emplace_back(".");
 
     for (const auto& d : library_directory) {
-        std::filesystem::path p = d / library_name;
+        std::filesystem::path c(library_name);
+        std::filesystem::path p = d / c;
+        LOG(INFO) << LOG_KEY(d) << LOG_KEY(c) << LOG_KEY(p);
         if (std::filesystem::exists(p)) {
             LOG(INFO) << LOG_KEY(p);
             return p;
+        }
+
+        if (library_name[0] == '/') {
+            std::filesystem::path c(library_name.substr(1));
+            std::filesystem::path p = d / c;
+            LOG(INFO) << LOG_KEY(d) << LOG_KEY(c) << LOG_KEY(p);
+            if (std::filesystem::exists(p)) {
+                LOG(INFO) << LOG_KEY(p);
+                return p;
+            }
         }
     }
     LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
     std::abort();
 }
-
-}  // namespace
 
 void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
     binaries_.emplace_back(ELFBinary(root_path));

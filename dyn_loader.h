@@ -110,3 +110,6 @@ void InitializeDynLoader(const std::filesystem::path& main_path, const std::vect
                          const std::vector<std::string>& argv);
 
 std::shared_ptr<DynLoader> GetDynLoader();
+
+std::filesystem::path FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
+                                  std::optional<std::filesystem::path> rpath);

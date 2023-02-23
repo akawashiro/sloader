@@ -150,7 +150,7 @@ Elf64_Addr ELFBinary::Load(Elf64_Addr base_addr_arg, std::shared_ptr<std::ofstre
 
 void ELFBinary::ParseDynamic() {
     // Must mmap PT_LOADs before call ParseDynamic.
-    CHECK_NE(base_addr_, 0UL);
+    CHECK(base_addr_ != 0UL || ehdr_.e_type == ET_EXEC);
 
     const size_t dyn_size = sizeof(Elf64_Dyn);
     CHECK_EQ(file_dynamic_.p_filesz % dyn_size, 0U);
@@ -168,7 +168,7 @@ void ELFBinary::ParseDynamic() {
         }
     }
 
-    CHECK_NE(strtab_, nullptr);
+    CHECK(strtab_ != nullptr || ehdr_.e_type == ET_EXEC);
 
     for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
         Elf64_Dyn* dyn = reinterpret_cast<Elf64_Dyn*>(base_addr_ + file_dynamic_.p_vaddr + dyn_size * i);

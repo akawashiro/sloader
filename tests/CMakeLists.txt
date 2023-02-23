@@ -190,7 +190,6 @@ add_test(NAME test_curl
                  ${cmake_binary_dir}/sloader curl -s www.example.com)
 
 set_tests_properties(
-    test_gcc
     test_rustc
     test_top
     test_python3_torch_ones

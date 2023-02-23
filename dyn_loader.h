@@ -5,11 +5,11 @@
 
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <optional>
 #include <queue>
 #include <set>
-#include <map>
 #include <tuple>
 
 #include "utils.h"
@@ -41,7 +41,7 @@ public:
     const char* strtab() const { return strtab_; }
     const Elf64_Ehdr ehdr() const { return ehdr_; }
 
-    void Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file);
+    Elf64_Addr Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file);
     void ParseDynamic();
 
 private:
@@ -71,7 +71,7 @@ private:
     std::vector<Elf64_Sym> symtabs_;
     Elf64_Xword syment_ = 0;
     std::vector<Elf64_Phdr> file_phdrs_;
-    Elf64_Phdr file_dynamic_;
+    Elf64_Phdr file_dynamic_ = {.p_filesz = 0};
     bool has_tls_ = false;
     Elf64_Phdr file_tls_;
     std::vector<std::string> neededs_;

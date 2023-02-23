@@ -90,9 +90,9 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     }
 }
 
-void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file) {
-    LOG(INFO) << LOG_BITS(base_addr);
-    base_addr_ = base_addr;
+Elf64_Addr ELFBinary::Load(Elf64_Addr base_addr_arg, std::shared_ptr<std::ofstream> map_file) {
+    LOG(INFO) << LOG_BITS(base_addr_arg);
+    base_addr_ = (ehdr().e_type == ET_DYN) ? base_addr_arg : 0;
     end_addr_ = base_addr_;
 
     LOG(INFO) << "Load start " << path_;
@@ -102,8 +102,8 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_fi
             continue;
         }
         LOG(INFO) << LOG_BITS(reinterpret_cast<void*>(ph.p_vaddr)) << LOG_BITS(ph.p_memsz);
-        void* mmap_start = reinterpret_cast<void*>(((ph.p_vaddr + base_addr) & (~(0xfff))));
-        void* mmap_end = reinterpret_cast<void*>((((ph.p_vaddr + ph.p_memsz + base_addr) + 0xfff) & (~(0xfff))));
+        void* mmap_start = reinterpret_cast<void*>(((ph.p_vaddr + base_addr()) & (~(0xfff))));
+        void* mmap_end = reinterpret_cast<void*>((((ph.p_vaddr + ph.p_memsz + base_addr()) + 0xfff) & (~(0xfff))));
         end_addr_ = reinterpret_cast<Elf64_Addr>(mmap_end);
         size_t mmap_size = reinterpret_cast<size_t>(mmap_end) - reinterpret_cast<size_t>(mmap_start);
         int flags = 0;
@@ -131,24 +131,26 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_fi
         LOG(INFO) << "mmap: " << LOG_KEY(path_) << LOG_BITS(p) << LOG_BITS(mmap_start) << LOG_BITS(ph.p_vaddr)
                   << "errno = " << std::strerror(errno);
         CHECK_EQ(mmap_start, +p);
-        CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr);
-        CHECK_LE(ph.p_vaddr + base_addr + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
+        CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr());
+        CHECK_LE(ph.p_vaddr + base_addr() + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
         LOG(INFO) << LOG_BITS(mmap_start) << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ + ph.p_offset)) << LOG_BITS(ph.p_filesz);
         *map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16) << " "
                   << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
                   << std::endl;
-        memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr), file_base_addr_ + ph.p_offset, ph.p_filesz);
+        memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr()), file_base_addr_ + ph.p_offset, ph.p_filesz);
     }
     LOG(INFO) << "Load end";
 
     LOG(INFO) << "ParseDynamic start";
     ParseDynamic();
     LOG(INFO) << "ParseDynamic end";
+
+    return (end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 }
 
 void ELFBinary::ParseDynamic() {
     // Must mmap PT_LOADs before call ParseDynamic.
-    CHECK_NE(base_addr_, 0UL);
+    CHECK(base_addr_ != 0UL || ehdr_.e_type == ET_EXEC);
 
     const size_t dyn_size = sizeof(Elf64_Dyn);
     CHECK_EQ(file_dynamic_.p_filesz % dyn_size, 0U);
@@ -166,7 +168,7 @@ void ELFBinary::ParseDynamic() {
         }
     }
 
-    CHECK_NE(strtab_, nullptr);
+    CHECK(strtab_ != nullptr || ehdr_.e_type == ET_EXEC);
 
     for (size_t i = 0; i < file_dynamic_.p_filesz / dyn_size; ++i) {
         Elf64_Dyn* dyn = reinterpret_cast<Elf64_Dyn*>(base_addr_ + file_dynamic_.p_vaddr + dyn_size * i);
@@ -308,9 +310,8 @@ std::filesystem::path FindLibrary(std::string library_name, std::optional<std::f
 
 void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
     binaries_.emplace_back(ELFBinary(root_path));
-    binaries_.back().Load(next_base_addr_, map_file_);
+    next_base_addr_ = binaries_.back().Load(next_base_addr_, map_file_);
     loaded_.insert(root_path.filename());
-    next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 
     std::queue<std::tuple<std::string, std::optional<std::filesystem::path>, std::optional<std::filesystem::path>>> queue;
 
@@ -334,8 +335,7 @@ void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
 
         const auto library_path = FindLibrary(library_name, runpath, rpath);
         binaries_.emplace_back(ELFBinary(library_path));
-        binaries_.back().Load(next_base_addr_, map_file_);
-        next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+        next_base_addr_ = binaries_.back().Load(next_base_addr_, map_file_);
         for (const auto& n : binaries_.back().neededs()) {
             queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
         }

@@ -64,7 +64,7 @@ std::vector<std::filesystem::path> read_ldsoconf() {
 
 ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     int fd = open(path_.c_str(), O_RDONLY);
-    CHECK(fd >= 0);
+    CHECK(fd >= 0) << path_;
 
     size_t size = lseek(fd, 0, SEEK_END);
     CHECK_GT(size, 8UL + 16UL);

@@ -239,7 +239,7 @@ std::map<std::string, const char*> sloader_libc_tls_variables = {
     {"__resp", reinterpret_cast<const char*>(&_res)},
 };
 
-int sloader_atexit_always_success(void (*function)(void)){
+int sloader_atexit_always_success(void (*function)(void)) {
     return 0;
 }
 
@@ -957,6 +957,16 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"program_invocation_name", reinterpret_cast<Elf64_Addr>(&program_invocation_name)},
     {"program_invocation_short_name", reinterpret_cast<Elf64_Addr>(&program_invocation_short_name)},
     {"pselect", reinterpret_cast<Elf64_Addr>(&pselect)},
+    {"pthread_getattr_np", reinterpret_cast<Elf64_Addr>(&pthread_getattr_np)},
+    {"pthread_attr_getguardsize", reinterpret_cast<Elf64_Addr>(&pthread_attr_getguardsize)},
+    {"__fxstat64", reinterpret_cast<Elf64_Addr>(&fstat64)},
+    {"pthread_attr_getstack", reinterpret_cast<Elf64_Addr>(&pthread_attr_getstack)},
+    {"bcmp", reinterpret_cast<Elf64_Addr>(&bcmp)},
+    {"__lxstat64", reinterpret_cast<Elf64_Addr>(&lstat64)},
+    {"__xstat64", reinterpret_cast<Elf64_Addr>(&stat64)},
+    {"__fxstatat64", reinterpret_cast<Elf64_Addr>(&fstatat64)},
+    // {"__libc_fatal", reinterpret_cast<Elf64_Addr>(&__libc_fatal)},
+    // {"__libc_unwind_link_get", reinterpret_cast<Elf64_Addr>(&__libc_unwind_link_get)},
     {"pthread_attr_destroy", reinterpret_cast<Elf64_Addr>(&pthread_attr_destroy)},
     {"pthread_attr_getstacksize", reinterpret_cast<Elf64_Addr>(&pthread_attr_getstacksize)},
     {"pthread_attr_init", reinterpret_cast<Elf64_Addr>(&pthread_attr_init)},

@@ -5,11 +5,11 @@
 
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <optional>
 #include <queue>
 #include <set>
-#include <map>
 #include <tuple>
 
 #include "utils.h"
@@ -41,7 +41,7 @@ public:
     const char* strtab() const { return strtab_; }
     const Elf64_Ehdr ehdr() const { return ehdr_; }
 
-    void Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file);
+    Elf64_Addr Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file);
     void ParseDynamic();
 
 private:

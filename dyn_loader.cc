@@ -90,9 +90,9 @@ ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     }
 }
 
-void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_file) {
-    LOG(INFO) << LOG_BITS(base_addr);
-    base_addr_ = base_addr;
+Elf64_Addr ELFBinary::Load(Elf64_Addr base_addr_arg, std::shared_ptr<std::ofstream> map_file) {
+    LOG(INFO) << LOG_BITS(base_addr_arg);
+    base_addr_ = (ehdr().e_type == ET_DYN) ? base_addr_arg : 0;
     end_addr_ = base_addr_;
 
     LOG(INFO) << "Load start " << path_;
@@ -102,8 +102,8 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_fi
             continue;
         }
         LOG(INFO) << LOG_BITS(reinterpret_cast<void*>(ph.p_vaddr)) << LOG_BITS(ph.p_memsz);
-        void* mmap_start = reinterpret_cast<void*>(((ph.p_vaddr + base_addr) & (~(0xfff))));
-        void* mmap_end = reinterpret_cast<void*>((((ph.p_vaddr + ph.p_memsz + base_addr) + 0xfff) & (~(0xfff))));
+        void* mmap_start = reinterpret_cast<void*>(((ph.p_vaddr + base_addr()) & (~(0xfff))));
+        void* mmap_end = reinterpret_cast<void*>((((ph.p_vaddr + ph.p_memsz + base_addr()) + 0xfff) & (~(0xfff))));
         end_addr_ = reinterpret_cast<Elf64_Addr>(mmap_end);
         size_t mmap_size = reinterpret_cast<size_t>(mmap_end) - reinterpret_cast<size_t>(mmap_start);
         int flags = 0;
@@ -131,19 +131,21 @@ void ELFBinary::Load(Elf64_Addr base_addr, std::shared_ptr<std::ofstream> map_fi
         LOG(INFO) << "mmap: " << LOG_KEY(path_) << LOG_BITS(p) << LOG_BITS(mmap_start) << LOG_BITS(ph.p_vaddr)
                   << "errno = " << std::strerror(errno);
         CHECK_EQ(mmap_start, +p);
-        CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr);
-        CHECK_LE(ph.p_vaddr + base_addr + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
+        CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr());
+        CHECK_LE(ph.p_vaddr + base_addr() + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
         LOG(INFO) << LOG_BITS(mmap_start) << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ + ph.p_offset)) << LOG_BITS(ph.p_filesz);
         *map_file << path().string() << " " << HexString(ph.p_offset, 16) << "-" << HexString(ph.p_offset + ph.p_filesz, 16) << " "
                   << flags_str << " " << HexString(ph.p_filesz, 16) << " => " << HexString(mmap_start, 16) << "-" << HexString(mmap_end, 16)
                   << std::endl;
-        memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr), file_base_addr_ + ph.p_offset, ph.p_filesz);
+        memcpy(reinterpret_cast<void*>(ph.p_vaddr + base_addr()), file_base_addr_ + ph.p_offset, ph.p_filesz);
     }
     LOG(INFO) << "Load end";
 
     LOG(INFO) << "ParseDynamic start";
     ParseDynamic();
     LOG(INFO) << "ParseDynamic end";
+
+    return (end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 }
 
 void ELFBinary::ParseDynamic() {

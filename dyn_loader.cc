@@ -300,9 +300,8 @@ std::filesystem::path FindLibrary(std::string library_name, std::optional<std::f
 
 void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
     binaries_.emplace_back(ELFBinary(root_path));
-    binaries_.back().Load(next_base_addr_, map_file_);
+    next_base_addr_ = binaries_.back().Load(next_base_addr_, map_file_);
     loaded_.insert(root_path.filename());
-    next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
 
     std::queue<std::tuple<std::string, std::optional<std::filesystem::path>, std::optional<std::filesystem::path>>> queue;
 
@@ -326,8 +325,7 @@ void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
 
         const auto library_path = FindLibrary(library_name, runpath, rpath);
         binaries_.emplace_back(ELFBinary(library_path));
-        binaries_.back().Load(next_base_addr_, map_file_);
-        next_base_addr_ = (binaries_.back().end_addr() + (0x400000 - 1)) / 0x400000 * 0x400000;
+        next_base_addr_ = binaries_.back().Load(next_base_addr_, map_file_);
         for (const auto& n : binaries_.back().neededs()) {
             queue.push(std::make_tuple(n, binaries_.back().runpath(), binaries_.back().rpath()));
         }

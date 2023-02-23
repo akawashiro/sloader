@@ -71,7 +71,7 @@ private:
     std::vector<Elf64_Sym> symtabs_;
     Elf64_Xword syment_ = 0;
     std::vector<Elf64_Phdr> file_phdrs_;
-    Elf64_Phdr file_dynamic_;
+    Elf64_Phdr file_dynamic_ = {.p_filesz = 0};
     bool has_tls_ = false;
     Elf64_Phdr file_tls_;
     std::vector<std::string> neededs_;

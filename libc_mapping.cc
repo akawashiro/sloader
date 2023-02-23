@@ -239,6 +239,10 @@ std::map<std::string, const char*> sloader_libc_tls_variables = {
     {"__resp", reinterpret_cast<const char*>(&_res)},
 };
 
+int sloader_atexit_always_success(void (*function)(void)){
+    return 0;
+}
+
 std::map<std::string, Elf64_Addr> sloader_libc_map = {
     // sloader dummy functions
     {"ZSTD_trace_compress_begin", reinterpret_cast<Elf64_Addr>(&sloader_ZSTD_trace_compress_begin)},
@@ -249,7 +253,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"_ITM_registerTMCloneTable", reinterpret_cast<Elf64_Addr>(&sloader__ITM_registerTMCloneTable)},
     {"__asprintf_chk", reinterpret_cast<Elf64_Addr>(&sloader___asprintf_chk)},
     {"__assert_fail", reinterpret_cast<Elf64_Addr>(&sloader___assert_fail)},
-    {"__cxa_atexit", reinterpret_cast<Elf64_Addr>(&sloader___cxa_atexit)},
+    {"__cxa_atexit", reinterpret_cast<Elf64_Addr>(&sloader_atexit_always_success)},
     {"__cxa_finalize", reinterpret_cast<Elf64_Addr>(&sloader___cxa_finalize)},
     {"__cxa_thread_atexit_impl", reinterpret_cast<Elf64_Addr>(&sloader___cxa_thread_atexit_impl)},
     {"__fxstat", reinterpret_cast<Elf64_Addr>(&sloader___fxstat)},
@@ -404,6 +408,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"_longjmp", reinterpret_cast<Elf64_Addr>(&_longjmp)},
     {"_obstack_begin", reinterpret_cast<Elf64_Addr>(&_obstack_begin)},
     {"_obstack_newchunk", reinterpret_cast<Elf64_Addr>(&_obstack_newchunk)},
+    {"_obstack_free", reinterpret_cast<Elf64_Addr>(&obstack_free)},
     {"_setjmp", reinterpret_cast<Elf64_Addr>(&_setjmp)},
     {"abort", reinterpret_cast<Elf64_Addr>(&abort)},
     {"accept", reinterpret_cast<Elf64_Addr>(&accept)},
@@ -563,6 +568,7 @@ std::map<std::string, Elf64_Addr> sloader_libc_map = {
     {"fgetwc", reinterpret_cast<Elf64_Addr>(&fgetwc)},
     {"fgetxattr", reinterpret_cast<Elf64_Addr>(&fgetxattr)},
     {"fileno", reinterpret_cast<Elf64_Addr>(&fileno)},
+    {"fileno_unlocked", reinterpret_cast<Elf64_Addr>(&fileno_unlocked)},
     {"flistxattr", reinterpret_cast<Elf64_Addr>(&flistxattr)},
     {"flock", reinterpret_cast<Elf64_Addr>(&flock)},
     {"flockfile", reinterpret_cast<Elf64_Addr>(&flockfile)},

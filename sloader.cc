@@ -70,13 +70,7 @@ int main(int argc, char* const argv[], char** envp) {
 
 
     Elf64_Half etype = GetEType(fullpath);
-    if (etype == ET_EXEC) {
-        auto exec_loader = MakeExecLoader(fullpath, argv0);
-        exec_loader->Show();
-        exec_loader->Load();
-        exec_loader->Execute(envs);
-        exec_loader->Unload();
-    } else if (etype == ET_DYN) {
+    if (etype == ET_DYN || etype == ET_EXEC) {
         InitializeDynLoader(fullpath, envs, args);
         GetDynLoader()->Run();
     } else {

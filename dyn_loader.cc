@@ -283,6 +283,7 @@ std::filesystem::path FindLibrary(std::string library_name, std::optional<std::f
     library_directory.emplace_back("/lib");
     library_directory.emplace_back("/usr/lib");
     library_directory.emplace_back("/usr/lib64");
+    library_directory.emplace_back("/usr/lib/x86_64-linux-gnu");
     library_directory.emplace_back(".");
 
     for (const auto& d : library_directory) {

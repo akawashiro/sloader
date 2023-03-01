@@ -287,25 +287,20 @@ std::filesystem::path FindLibrary(std::string library_name, std::optional<std::f
     library_directory.emplace_back(".");
 
     for (const auto& d : library_directory) {
-        std::filesystem::path c(library_name);
-        std::filesystem::path p = d / c;
-        LOG(INFO) << LOG_KEY(d) << LOG_KEY(c) << LOG_KEY(p);
-        if (std::filesystem::exists(p)) {
-            LOG(INFO) << LOG_KEY(p);
-            return p;
+        if(!std::filesystem::is_directory(d)) {
+            continue;
         }
 
-        if (library_name[0] == '/') {
-            std::filesystem::path c(library_name.substr(1));
-            std::filesystem::path p = d / c;
-            LOG(INFO) << LOG_KEY(d) << LOG_KEY(c) << LOG_KEY(p);
-            if (std::filesystem::exists(p)) {
-                LOG(INFO) << LOG_KEY(p);
-                return p;
+        std::string searching_filename = std::filesystem::path(library_name).filename();
+        for (const auto& entry : std::filesystem::directory_iterator(d)) {
+            LOG(INFO) << LOG_KEY(entry.path().filename().string()) << LOG_KEY(searching_filename);
+            if (entry.path().filename().string().starts_with(searching_filename)) {
+                LOG(INFO) << LOG_KEY(entry.path());
+                return entry.path();
             }
         }
     }
-    LOG(FATAL) << "Cannot find " << LOG_KEY(library_name);
+    LOG(FATAL) << "Cannot find" << LOG_KEY(library_name);
     std::abort();
 }
 

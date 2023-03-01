@@ -12,3 +12,4 @@ RUN mkdir build
 RUN cmake -GNinja -S . -B build
 RUN cmake --build build
 RUN cd build && ctest --output-on-failure -j $(nproc)
+RUN ./make-sloader-itself.sh

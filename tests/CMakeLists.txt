@@ -166,8 +166,8 @@ add_test(NAME test_gcc
                  ${CMAKE_BINARY_DIR}/sloader gcc --help)
 
 add_test(NAME test_make
-         COMMAND python3 ${cmake_current_source_dir}/compare_stdout.py
-                 ${cmake_binary_dir}/sloader make --help)
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader make --help)
 
 add_test(NAME test_zsh
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py

@@ -1,5 +1,6 @@
 #! /bin/bash -eux
 
+cd $(git rev-parse --show-toplevel)
 SLOADER_PATH=$(realpath ./build/sloader)
 
 rm -rf build2

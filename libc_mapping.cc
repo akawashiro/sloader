@@ -179,7 +179,9 @@ void sloader_libc_start_main(int (*main)(int, char**, char**), int argc, char** 
     // After SYS_arch_prctl, we cannot use glog.
     // LOG(INFO) << LOG_BITS(main);
     // We need __libc_stack_end
-    exit(main(argc, argv, NULL));
+   
+    // TODO: Passing __environ to main is not correct.
+    exit(main(argc, argv, __environ));
 }
 
 #define DEFINE_DUMMY_FUN(name) \

@@ -5,5 +5,7 @@ then
     git clone https://github.com/curl/curl.git
 fi
 
-cmake -B curl/build -S curl 
-cmake --build curl/build -j
+rm -rf curl-install
+mkdir -p curl-install
+cmake -B curl/build -S curl -DCMAKE_INSTALL_PREFIX=curl-install
+cmake --build curl/build -- install -j

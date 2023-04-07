@@ -190,19 +190,22 @@ add_test(NAME test_python3_torch_ones
                  ${CMAKE_BINARY_DIR}/sloader python3 ${CMAKE_CURRENT_SOURCE_DIR}/torch_ones.py)
 
 add_test(NAME test_bash_plus
-         COMMAND python3 ${cmake_current_source_dir}/compare_stdout.py
-                 ${cmake_binary_dir}/sloader bash ${cmake_current_source_dir}/one_plus_one.sh)
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader bash ${CMAKE_CURRENT_SOURCE_DIR}/one_plus_one.sh)
 
 add_test(NAME test_curl
-         COMMAND python3 ${cmake_current_source_dir}/compare_stdout.py
-                 ${cmake_binary_dir}/sloader curl -s www.example.com)
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader curl -s www.example.com)
+
+add_test(NAME test_curl_selfbuild
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+                 ${CMAKE_BINARY_DIR}/sloader ${CMAKE_SOURCE_DIR}/curl-install/bin/curl -s www.example.com
+         PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_SOURCE_DIR}/curl-install/lib")
 
 set_tests_properties(
     test_rustc
     test_top
     test_python3_torch_ones
-    test_bash_plus
-    test_curl
     PROPERTIES WILL_FAIL TRUE)
 
 if(CUSTOM_LIBC_PATH)

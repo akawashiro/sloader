@@ -14,8 +14,10 @@
   - [Test using custom build glibc](#test-using-custom-build-glibc)
 
 ## Current status
-`sloader` can load many practical programs such as `cmake`, `g++`, `ld`, `htop`, etc. However, `sloader` depends on `ld-linux.so` because I cannot statically link `sloader` now. Furthermore, `sloader` can launche some GUI applications.
+`sloader` can load many practical programs such as `cmake`, `g++`, `ld`, `htop`, etc. Furthermore, `sloader` can launche some GUI applications.
 ![GUI applications launched by sloader](./xapps-launched-by-sloader.png)
+
+However, `sloader` depends on `ld-linux.so` because I cannot statically link `sloader` now. 
 
 ## How to build and use
 ```

@@ -36,7 +36,7 @@ When you run an executable binary file on Linux using execve(2), there are two e
 You can check the specified loader path using `readelf -l`. In most cases,  you will find `Requesting program interpreter: /lib64/ld-linux-x86-64.so.2` which means the loader loads the binary. Although the path includes `-x86-64` because my machine is x86-64, I call it `ld-linux.so` from now for generality.
 
 ```
-> readelf -l $(which nvim) | grep INTERP -A 2
+$ readelf -l $(which nvim) | grep INTERP -A 2
   INTERP         0x0000000000000318 0x0000000000000318 0x0000000000000318
                  0x000000000000001c 0x000000000000001c  R      0x1
       [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]

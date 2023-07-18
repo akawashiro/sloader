@@ -130,7 +130,7 @@ Elf64_Addr ELFBinary::Load(Elf64_Addr base_addr_arg, std::shared_ptr<std::ofstre
         char* p = reinterpret_cast<char*>(mmap(mmap_start, mmap_size, flags, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
         LOG(INFO) << "mmap: " << LOG_KEY(path_) << LOG_BITS(p) << LOG_BITS(mmap_start) << LOG_BITS(ph.p_vaddr)
                   << "errno = " << std::strerror(errno);
-        CHECK_EQ(mmap_start, +p);
+        CHECK_EQ(mmap_start, reinterpret_cast<void*>(p));
         CHECK_LE(reinterpret_cast<Elf64_Addr>(mmap_start), ph.p_vaddr + base_addr());
         CHECK_LE(ph.p_vaddr + base_addr() + ph.p_memsz, reinterpret_cast<Elf64_Addr>(mmap_end));
         LOG(INFO) << LOG_BITS(mmap_start) << LOG_BITS(reinterpret_cast<size_t>(file_base_addr_ + ph.p_offset)) << LOG_BITS(ph.p_filesz);
@@ -339,7 +339,7 @@ void DynLoader::LoadDependingLibs(const std::filesystem::path& root_path) {
 }
 
 DynLoader::DynLoader(const std::filesystem::path& main_path, const std::vector<std::string>& args, const std::vector<std::string>& envs)
-    : main_path_(main_path), args_(args), envs_(envs), next_base_addr_(0x40'0000) {
+    : main_path_(main_path), args_(args), envs_(envs), next_base_addr_(0x140'0000) {
     map_file_ =
         std::make_shared<std::ofstream>(std::getenv("SLOADER_MAP_FILE") == nullptr ? "/tmp/sloader_map" : std::getenv("SLOADER_MAP_FILE"));
 }

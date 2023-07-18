@@ -2,7 +2,7 @@
 
 void fromMain();
 
-void hoge(){
+void hoge() {
     printf("hogehoge\n");
     fromMain();
 }

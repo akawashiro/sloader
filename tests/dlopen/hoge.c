@@ -1,5 +1,5 @@
 #include <stdio.h>
 
-void hoge(){
+void hoge() {
     printf("hogehoge\n");
 }

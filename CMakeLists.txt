@@ -28,14 +28,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/raw_write)
 
 add_library(tls_secure tls_secure.cc)
 
-add_executable(sloader sloader.cc dyn_loader.cc libc_mapping.cc sloader_dl.cc utils.cc)
+add_executable(sloader sloader.cc dyn_loader.cc libc_mapping.cc sloader_dl.cc utils.cc sloader_static.map)
 target_link_libraries(sloader glog tls_secure)
 target_compile_options(sloader PUBLIC -Wall -Werror)
-# TODO static link fail to secure TLS space.
-# target_link_options(sloader PUBLIC -static -T
-#                     ${CMAKE_CURRENT_SOURCE_DIR}/sloader.map)
-target_link_options(sloader PUBLIC -T
-                    ${CMAKE_CURRENT_SOURCE_DIR}/sloader.map)
+target_link_options(sloader PUBLIC -static -Wl,-verbose -T ${CMAKE_CURRENT_SOURCE_DIR}/sloader_static.map)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/CTestCustom.cmake
                ${CMAKE_CURRENT_BINARY_DIR})

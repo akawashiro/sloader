@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void fromMain(){
+void fromMain() {
     printf("From main\n");
 }
 
-int main(){
+int main() {
     void* handle = dlopen("./libdlopen2_hoge.so", RTLD_NOW);
-    if(handle == NULL){
+    if (handle == NULL) {
         printf("handle is NULL\n");
         exit(1);
     }

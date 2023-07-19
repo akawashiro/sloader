@@ -6,6 +6,6 @@ add_executable(dlopen_main main.c)
 add_test(
   NAME dlopen_test
   COMMAND
-    python3 ${CMAKE_SOURCE_DIR}/tests/compare_stdout.py ${CMAKE_BINARY_DIR}/sloader
-    ${CMAKE_BINARY_DIR}/tests/dlopen/dlopen_main
+    python3 ${CMAKE_SOURCE_DIR}/tests/compare_stdout.py
+    ${CMAKE_BINARY_DIR}/sloader ${CMAKE_BINARY_DIR}/tests/dlopen/dlopen_main
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/dlopen)

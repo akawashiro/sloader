@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(){
+int main() {
     void* handle = dlopen("./libdlopen_hoge.so", RTLD_NOW);
-    if(handle == NULL){
+    if (handle == NULL) {
         printf("handle is NULL\n");
         exit(1);
     }

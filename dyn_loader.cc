@@ -265,6 +265,13 @@ const Elf64_Addr ELFBinary::GetSymbolAddr(const size_t symbol_index) {
 
 std::filesystem::path FindLibrary(std::string library_name, std::optional<std::filesystem::path> runpath,
                                   std::optional<std::filesystem::path> rpath) {
+    {
+        std::filesystem::path library_path(library_name);
+        if (library_path.is_absolute() && std::filesystem::exists(library_path)) {
+            return library_path;
+        }
+    }
+
     std::vector<std::filesystem::path> library_directory;
 
     std::string sloader_library_path(std::getenv("SLOADER_LIBRARY_PATH") == nullptr ? "" : std::getenv("SLOADER_LIBRARY_PATH"));

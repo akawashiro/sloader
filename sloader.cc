@@ -30,7 +30,7 @@ Elf64_Half GetEType(const std::filesystem::path& filepath) {
     size_t mapped_size = (size + 0xfff) & ~0xfff;
 
     char* p = (char*)mmap(NULL, mapped_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, fd, 0);
-    CHECK(p != MAP_FAILED);
+    CHECK(p != MAP_FAILED) << LOG_BITS(mapped_size) << LOG_BITS(size) << LOG_KEY(filepath);
 
     Elf64_Ehdr* ehdr = reinterpret_cast<Elf64_Ehdr*>(p);
     return ehdr->e_type;
@@ -48,7 +48,7 @@ int main(int argc, char* const argv[], char** envp) {
         std::vector<std::string> path_dirs = SplitWith(std::string(getenv("PATH")), ":");
         for (const auto& dir : path_dirs) {
             std::filesystem::path p = std::filesystem::path(dir) / argv0;
-            if (std::filesystem::exists(p)) {
+            if (std::filesystem::exists(p) && std::filesystem::is_regular_file(p)) {
                 fullpath = p;
                 break;
             }
@@ -67,7 +67,6 @@ int main(int argc, char* const argv[], char** envp) {
     for (char** env = envp; *env != 0; env++) {
         envs.emplace_back(*env);
     }
-
 
     Elf64_Half etype = GetEType(fullpath);
     if (etype == ET_DYN || etype == ET_EXEC) {

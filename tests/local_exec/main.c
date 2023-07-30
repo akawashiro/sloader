@@ -40,16 +40,16 @@ int main() {
 
     RAW_PRINT_STR("&i0=0x");
     RAW_PRINT_HEX(&i0);
-    RAW_BREAK();
-    RAW_PRINT_STR("\n&i1=");
+    // RAW_BREAK();
+    RAW_PRINT_STR("\n&i1=0x");
     RAW_PRINT_HEX(&i1);
-    RAW_PRINT_STR("\n&i2=");
+    RAW_PRINT_STR("\n&i2=0x");
     RAW_PRINT_HEX(&i2);
-    RAW_PRINT_STR("\n&i3=");
+    RAW_PRINT_STR("\n&i3=0x");
     RAW_PRINT_HEX(&i3);
-    RAW_PRINT_STR("\n&i4=");
+    RAW_PRINT_STR("\n&i4=0x");
     RAW_PRINT_HEX(&i4);
-    RAW_PRINT_STR("\n&i5=");
+    RAW_PRINT_STR("\n&i5=0x");
     RAW_PRINT_HEX(&i5);
 
     // RAW_PRINT_STR("\nShould be 0xaabbccdd: uint32_t j=");

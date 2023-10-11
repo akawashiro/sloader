@@ -4,7 +4,6 @@ RUN apt-get update && apt-get install -y ninja-build cmake gcc g++ git python3 p
 RUN pip3 install torch==1.13.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
 COPY . /sloader
 WORKDIR /sloader
-RUN ./build_chibicc.sh
 # TODO
 # RUN ./run-format.sh
 RUN rm -rf build

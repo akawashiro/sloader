@@ -87,7 +87,7 @@ $ cd sloader
 $ mkdir build
 $ cmake -S . -B build -G Ninja
 $ cmake --build build
-$ ./clone_glibc.sh
-$ ./build_glibc.sh
+$ ./misc/clone_glibc.sh
+$ ./misc/build_glibc.sh
 $ SLOADER_LIBRARY_PATH=/home/akira/sloader/glibc-install/lib ./build/sloader ./build/tests/hello_glibc/hello_glibc
 ```

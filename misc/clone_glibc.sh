@@ -9,7 +9,7 @@ then
     pushd glibc
     git remote add upstream https://sourceware.org/git/glibc.git
     git fetch --all
-    git checkout origin/print-for-sloader
+    git checkout glibc-2.35
     popd
 fi
 

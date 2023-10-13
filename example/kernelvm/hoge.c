@@ -1,2 +1,4 @@
 #include <stdio.h>
-void hoge(){ printf("hoge\n"); }
+void hoge() {
+    printf("hoge\n");
+}

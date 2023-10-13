@@ -1,2 +1,4 @@
 void hoge();
-int main(){ hoge(); }
+int main() {
+    hoge();
+}

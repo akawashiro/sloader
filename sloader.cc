@@ -30,14 +30,15 @@ Elf64_Half GetEType(const std::filesystem::path& filepath) {
     size_t mapped_size = (size + 0xfff) & ~0xfff;
 
     char* p = (char*)mmap(NULL, mapped_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, fd, 0);
-    CHECK(p != MAP_FAILED) << LOG_BITS(mapped_size) << LOG_BITS(size) << LOG_KEY(filepath);
+    LOG(FATAL) << LOG_BITS(mapped_size) << LOG_BITS(size) << LOG_KEY(filepath);
+    CHECK(p != MAP_FAILED);
 
     Elf64_Ehdr* ehdr = reinterpret_cast<Elf64_Ehdr*>(p);
     return ehdr->e_type;
 }
 
 int main(int argc, char* const argv[], char** envp) {
-    google::InitGoogleLogging(argv[0]);
+    // google::InitGoogleLogging(argv[0]);
 
     std::string argv0 = argv[1];
     std::filesystem::path fullpath;
@@ -56,7 +57,7 @@ int main(int argc, char* const argv[], char** envp) {
     }
 
     LOG(INFO) << LOG_KEY(fullpath);
-    CHECK(std::filesystem::exists(fullpath)) << fullpath;
+    CHECK(std::filesystem::exists(fullpath));
 
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {
@@ -74,5 +75,6 @@ int main(int argc, char* const argv[], char** envp) {
         GetDynLoader()->Run();
     } else {
         LOG(FATAL) << "Unsupported etype = " << LOG_KEY(etype);
+        std::abort();
     }
 }

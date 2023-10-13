@@ -64,7 +64,8 @@ std::vector<std::filesystem::path> read_ldsoconf() {
 
 ELFBinary::ELFBinary(const std::filesystem::path path) : path_(path) {
     int fd = open(path_.c_str(), O_RDONLY);
-    CHECK(fd >= 0) << path_;
+    LOG(INFO) << LOG_KEY(path_) << LOG_KEY(fd);
+    CHECK(fd >= 0);
 
     size_t size = lseek(fd, 0, SEEK_END);
     CHECK_GT(size, 8UL + 16UL);
@@ -598,6 +599,7 @@ Elf64_Addr DynLoader::TLSSymOffset(const std::string& name) {
         return (reinterpret_cast<const char*>(sloader_dummy_to_secure_tls_space) + 4096 - addr);
     }
     LOG(FATAL) << "Cannot find " << name;
+    std::abort();
 }
 
 void DynLoader::Relocate() {
@@ -703,6 +705,7 @@ void DynLoader::Relocate() {
                         size = sym.st_size;
                     } else {
                         LOG(FATAL) << "Cannot find " << name;
+                        std::abort();
                         break;
                     }
                     void* dest = reinterpret_cast<void*>(bin.base_addr() + r.r_offset);

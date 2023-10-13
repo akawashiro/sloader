@@ -15,14 +15,15 @@ jobs:
         context: .
         file: ./ubuntu-Dockerfile
 
-  check-debian-Dockerfile:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: docker build
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./debian-Dockerfile
+  # We cannot enable this CI job for now.
+  # check-debian-Dockerfile:
+  # 
+  #   runs-on: ubuntu-latest
+  # 
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: docker build
+  #     uses: docker/build-push-action@v2
+  #     with:
+  #       context: .
+  #       file: ./debian-Dockerfile

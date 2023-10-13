@@ -38,8 +38,6 @@ Elf64_Half GetEType(const std::filesystem::path& filepath) {
 }
 
 int main(int argc, char* const argv[], char** envp) {
-    // google::InitGoogleLogging(argv[0]);
-
     std::string argv0 = argv[1];
     std::filesystem::path fullpath;
 

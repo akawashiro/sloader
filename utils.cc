@@ -133,8 +133,6 @@ std::string ShowSTB(unsigned char bind) {
             return "STB_HIPROC";
         default: {
             return std::to_string(bind);
-            // LOG(FATAL) << LOG_KEY(bind);
-            // std::abort();
         }
     }
 }

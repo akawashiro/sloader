@@ -8,10 +8,16 @@
 #include <sstream>
 #include <vector>
 
-#define CHECK(x) \
-    if (!(x)) {  \
+class nullstream : public std::ostream {
+public:
+    nullstream() : std::ostream(nullptr) {}
+};
+inline nullstream null;
+
+#define CHECK(x)                                          \
+    if (!(x)) {                                           \
         std::cerr << "CHECK failed: " << #x << std::endl; \
-        exit(1); \
+        exit(1);                                          \
     }
 #define CHECK_GT(x, y) CHECK((x) > (y))
 #define CHECK_LT(x, y) CHECK((x) < (y))
@@ -19,7 +25,10 @@
 #define CHECK_NE(x, y) CHECK((x) != (y))
 #define CHECK_GE(x, y) CHECK((x) >= (y))
 #define CHECK_LE(x, y) CHECK((x) <= (y))
-#define LOG(loglevel) std::cerr << #loglevel << " " << __FILE__ << ":" << __LINE__ << " " << " "
+/* Replace null with std::cout to enable logging */
+#define LOG(loglevel)                                                   \
+    null << #loglevel << " " << __FILE__ << ":" << __LINE__ << " " \
+              << " "
 
 #define LOG_KEY_VALUE(key, value) " " << key << "=" << value
 #define LOG_KEY(key) LOG_KEY_VALUE(#key, key)

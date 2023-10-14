@@ -213,7 +213,7 @@ add_test(NAME test_curl
                  ${cmake_binary_dir}/sloader curl -s www.example.com)
 
 set_tests_properties(test_rustc test_top test_bash_plus test_curl
-                     test_python3_torch_ones PROPERTIES WILL_FAIL TRUE)
+                     PROPERTIES WILL_FAIL TRUE)
 
 if(CUSTOM_LIBC_PATH)
   add_custom_target(

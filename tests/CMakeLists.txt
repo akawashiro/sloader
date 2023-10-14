@@ -159,7 +159,7 @@ add_test(NAME test_tmux
 
 add_test(NAME test_python3
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-                 ${CMAKE_BINARY_DIR}/sloader python3 --help)
+                 ${CMAKE_BINARY_DIR}/sloader /usr/bin/python3 --help)
 
 add_test(NAME test_gcc
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
@@ -181,20 +181,25 @@ add_test(
   NAME test_python3_hello
   COMMAND
     python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-    ${CMAKE_BINARY_DIR}/sloader python3 ${CMAKE_CURRENT_SOURCE_DIR}/hello.py)
+    ${CMAKE_BINARY_DIR}/sloader /usr/bin/python3 ${CMAKE_CURRENT_SOURCE_DIR}/hello.py)
 
 add_test(
   NAME test_python3_ctypes
   COMMAND
     python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-    ${CMAKE_BINARY_DIR}/sloader python3 ${CMAKE_CURRENT_SOURCE_DIR}/ctypes.py)
+    ${CMAKE_BINARY_DIR}/sloader /usr/bin/python3 ${CMAKE_CURRENT_SOURCE_DIR}/ctypes.py)
 
-add_test(
-  NAME test_python3_torch_ones
-  COMMAND
-    python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
-    ${CMAKE_BINARY_DIR}/sloader python3
-    ${CMAKE_CURRENT_SOURCE_DIR}/torch_ones.py)
+# Installing additional packages is required but not supported yet.
+#
+# Just `python3` may be a bash script because of pyenv. So, we must use
+# `/usr/bin/python3` instead. Then, we must install torch system-wide. But, I
+# don't want to install torch system-wide just for testing.
+# add_test(
+#   NAME test_python3_torch_ones
+#   COMMAND
+#     python3 ${CMAKE_CURRENT_SOURCE_DIR}/compare_stdout.py
+#     ${CMAKE_BINARY_DIR}/sloader /usr/bin/python3
+#     ${CMAKE_CURRENT_SOURCE_DIR}/torch_ones.py)
 
 add_test(
   NAME test_bash_plus

@@ -1,6 +1,9 @@
 # sloader <!-- omit in toc -->
 `sloader` is an ELF loader that aims to replace `ld-linux.so.2` of glibc. 
 
+## Notice
+`sloader` haven't implmented almost all security related features. Please be careful.
+
 ## Table of Contents <!-- omit in toc -->
 - [Current status](#current-status)
 - [How to build and use](#how-to-build-and-use)
